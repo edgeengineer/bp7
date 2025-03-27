@@ -51,7 +51,7 @@ public struct IntegrityProtectedPlaintext: Sendable {
         // Include primary block if flag is set and primary block is available
         if scopeFlags.contains(.integrityPrimaryHeader) {
             if let pb = primaryBlock {
-                let primaryData = try pb.toCbor()
+                let primaryData = pb.toCbor()
                 optionalIpptData += primaryData
             } else {
                 print("Primary header flag set but no primary header given!")

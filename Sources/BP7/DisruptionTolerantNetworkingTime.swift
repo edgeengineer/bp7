@@ -5,6 +5,11 @@ import FoundationEssentials
 import Foundation
 #endif
 
+// Import Dispatch conditionally
+#if canImport(Dispatch)
+import Dispatch
+#endif
+
 /// Time since the year 2k in milliseconds
 public typealias DisruptionTolerantNetworkingTime = UInt64
 
@@ -32,9 +37,19 @@ public extension DisruptionTolerantNetworkingTime {
         let timeInterval = TimeInterval((self + DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K) / 1000)
         let date = Date(timeIntervalSince1970: timeInterval)
         
+        #if os(Linux)
+        // Simple ISO8601 formatter for Linux
+        let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 1000)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        let baseString = formatter.string(from: date)
+        return baseString + String(format: ".%03dZ", milliseconds)
+        #else
+        // Use ISO8601DateFormatter on Apple platforms
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
+        #endif
     }
     
     /// Convert DTN time to a Swift Date object
@@ -124,7 +139,8 @@ public struct CreationTimestamp: Equatable, Hashable, Sendable, CustomStringConv
 // MARK: - Thread-safe Sequence Generator (Synchronous version)
 /// A class to generate sequence numbers in a thread-safe manner
 final class SyncSequenceGenerator: @unchecked Sendable {
-    // Using a dispatch queue for synchronization - works on all platforms
+    #if canImport(Dispatch) && !os(Linux)
+    // Using a dispatch queue for synchronization on Apple platforms
     private let queue = DispatchQueue(label: "com.bp7.dtntime.sequence")
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
@@ -140,6 +156,36 @@ final class SyncSequenceGenerator: @unchecked Sendable {
             
             return lastSequence
         }
+    }
+    #else
+    // Using actor-based isolation for Linux and other platforms
+    // This provides thread safety without platform-specific locks
+    private let sequenceActor = SequenceActor()
+    
+    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
+        // Run synchronously on the actor
+        let task = Task {
+            await sequenceActor.nextSequence(for: timestamp)
+        }
+        return task.value
+    }
+    #endif
+}
+
+// Helper actor for thread-safe sequence generation on Linux
+actor SequenceActor {
+    private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
+    private var lastSequence: UInt64 = 0
+    
+    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
+        if timestamp != lastTimestamp {
+            lastTimestamp = timestamp
+            lastSequence = 0
+        } else {
+            lastSequence += 1
+        }
+        
+        return lastSequence
     }
 }
 
