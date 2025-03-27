@@ -270,7 +270,7 @@ public struct IntegrityBlock: Sendable {
 
 /// Builder for IntegrityBlock
 public struct IntegrityBlockBuilder {
-    private var securityTargets: [UInt64]?
+    private var securityTargets: [UInt64]
     private var securityContextId: Security.Context.ID
     private var securityContextFlags: Security.Context.Flag
     private var securitySource: EndpointID
@@ -278,8 +278,8 @@ public struct IntegrityBlockBuilder {
     private var securityResults: [[(UInt64, [UInt8])]]
     
     /// Create a new IntegrityBlockBuilder with default values
-    public init() {
-        self.securityTargets = nil
+    public init(securityTargets: [UInt64] = []) {
+        self.securityTargets = securityTargets
         self.securityContextId = .bibHmacSha2
         self.securityContextFlags = .absent
         self.securitySource = EndpointID.none()
@@ -287,7 +287,9 @@ public struct IntegrityBlockBuilder {
         self.securityResults = []
     }
     
-    /// Set the security targets
+    /// Set the security targets 
+    /// - Parameter securityTargets: The security targets
+    /// - Returns: The builder
     public func securityTargets(_ securityTargets: [UInt64]) -> IntegrityBlockBuilder {
         var builder = self
         builder.securityTargets = securityTargets
@@ -295,6 +297,8 @@ public struct IntegrityBlockBuilder {
     }
     
     /// Set the security context flags
+    /// - Parameter securityContextFlags: The security context flags
+    /// - Returns: The builder
     public func securityContextFlags(_ securityContextFlags: Security.Context.Flag) -> IntegrityBlockBuilder {
         var builder = self
         builder.securityContextFlags = securityContextFlags
@@ -302,6 +306,8 @@ public struct IntegrityBlockBuilder {
     }
     
     /// Set the security source
+    /// - Parameter securitySource: The security source
+    /// - Returns: The builder
     public func securitySource(_ securitySource: EndpointID) -> IntegrityBlockBuilder {
         var builder = self
         builder.securitySource = securitySource
@@ -309,6 +315,8 @@ public struct IntegrityBlockBuilder {
     }
     
     /// Set the security context parameters
+    /// - Parameter securityContextParameters: The security context parameters
+    /// - Returns: The builder
     public func securityContextParameters(_ securityContextParameters: BibSecurityContextParameter) -> IntegrityBlockBuilder {
         var builder = self
         builder.securityContextParameters = securityContextParameters
@@ -316,6 +324,8 @@ public struct IntegrityBlockBuilder {
     }
     
     /// Set the security results
+    /// - Parameter securityResults: The security results
+    /// - Returns: The builder
     public func securityResults(_ securityResults: [[(UInt64, [UInt8])]]) -> IntegrityBlockBuilder {
         var builder = self
         builder.securityResults = securityResults
@@ -323,9 +333,11 @@ public struct IntegrityBlockBuilder {
     }
     
     /// Build the integrity block
+    /// - Returns: The integrity block
+    /// - Throws: SecurityError
     public func build() throws -> IntegrityBlock {
         // Validate required fields
-        guard let securityTargets = self.securityTargets else {
+        guard !self.securityTargets.isEmpty else {
             throw SecurityError.missingSecurityTargets
         }
         

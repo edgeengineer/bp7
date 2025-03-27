@@ -14,21 +14,23 @@ import CBOR
 /// Type for canonical block type
 public typealias CanonicalBlockType = UInt64
 
-/// PAYLOAD_BLOCK is a BlockType for a payload block as defined in 4.2.3.
-public let PAYLOAD_BLOCK: CanonicalBlockType = 1
-public let PAYLOAD_BLOCK_NUMBER: CanonicalBlockType = 1
-
-/// PREVIOUS_NODE_BLOCK is a BlockType for a Previous Node block as defined in section 4.3.1.
-public let PREVIOUS_NODE_BLOCK: CanonicalBlockType = 6
-
-/// BUNDLE_AGE_BLOCK is a BlockType for a Bundle Age block as defined in section 4.3.2.
-public let BUNDLE_AGE_BLOCK: CanonicalBlockType = 7
-
-/// HOP_COUNT_BLOCK is a BlockType for a Hop Count block as defined in section 4.3.3.
-public let HOP_COUNT_BLOCK: CanonicalBlockType = 10
-
-/// EXTENSION_BLOCK_TYPE_MIN is the minimum block type for extension blocks
-public let EXTENSION_BLOCK_TYPE_MIN: CanonicalBlockType = 128
+/// Block types as defined in the BP7 specification
+public enum BlockType: CanonicalBlockType, Equatable, Hashable, Sendable, CaseIterable {
+    /// Payload block as defined in 4.2.3.
+    case payload = 1
+    
+    /// Previous Node block as defined in section 4.3.1.
+    case previousNode = 6
+    
+    /// Bundle Age block as defined in section 4.3.2.
+    case bundleAge = 7
+    
+    /// Hop Count block as defined in section 4.3.3.
+    case hopCount = 10
+    
+    /// The minimum block type for extension blocks
+    case extensionBlockTypeMin = 192
+}
 
 /// Errors related to canonical blocks
 public enum CanonicalError: Error, Equatable, Sendable {
@@ -98,7 +100,7 @@ public struct CanonicalBlockBuilder {
     private var data: CanonicalData?
     
     public init() {
-        self.blockType = PAYLOAD_BLOCK
+        self.blockType = BlockType.payload.rawValue
         self.blockNumber = 0
         self.blockControlFlags = 0
         self.crc = .crcNo
@@ -169,7 +171,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     /// Create a new canonical block with default values
     public static func new() -> CanonicalBlock {
         return CanonicalBlock(
-            blockType: PAYLOAD_BLOCK,
+            blockType: BlockType.payload.rawValue,
             blockNumber: 0,
             blockControlFlags: 0,
             crc: .crcNo,
@@ -248,9 +250,9 @@ public struct CanonicalBlock: Equatable, Sendable {
         // Parse data based on block type
         let data: CanonicalData
         
-        if blockType == PAYLOAD_BLOCK {
+        if blockType == BlockType.payload.rawValue {
             data = .data(rawPayload)
-        } else if blockType == BUNDLE_AGE_BLOCK {
+        } else if blockType == BlockType.bundleAge.rawValue {
             do {
                 let bundleAge = try CBOR.decode(rawPayload)
                 guard case .unsignedInt(let age) = bundleAge else {
@@ -260,7 +262,7 @@ public struct CanonicalBlock: Equatable, Sendable {
             } catch {
                 throw CanonicalError.decodingError("Error decoding bundle age block: \(error)")
             }
-        } else if blockType == HOP_COUNT_BLOCK {
+        } else if blockType == BlockType.hopCount.rawValue {
             do {
                 let hopCount = try CBOR.decode(rawPayload)
                 guard case .array(let hopCountItems) = hopCount, 
@@ -275,7 +277,7 @@ public struct CanonicalBlock: Equatable, Sendable {
             } catch {
                 throw CanonicalError.decodingError("Error decoding hop count block: \(error)")
             }
-        } else if blockType == PREVIOUS_NODE_BLOCK {
+        } else if blockType == BlockType.previousNode.rawValue {
             do {
                 let eidCbor = try CBOR.decode(rawPayload)
                 let eid = try EndpointID(from: eidCbor)
@@ -326,7 +328,7 @@ public struct CanonicalBlock: Equatable, Sendable {
         }
         
         // Validate block number for payload block
-        if self.blockType == PAYLOAD_BLOCK && self.blockNumber != 1 {
+        if self.blockType == BlockType.payload.rawValue && self.blockNumber != BlockType.payload.rawValue {
             errors.append(CanonicalError.canonicalBlockError("Payload block must have block number 1"))
         }
         
@@ -347,25 +349,25 @@ public struct CanonicalBlock: Equatable, Sendable {
     private func validateData() throws {
         switch self.data {
         case .hopCount(let limit, let count):
-            if self.blockType != HOP_COUNT_BLOCK {
+            if self.blockType != BlockType.hopCount.rawValue {
                 throw CanonicalError.canonicalBlockError("Hop count data not matching hop count block type")
             }
             if count > limit {
                 throw CanonicalError.canonicalBlockError("Hop count exceeds limit")
             }
         case .data(let data):
-            if self.blockType != PAYLOAD_BLOCK && self.blockType < EXTENSION_BLOCK_TYPE_MIN {
+            if self.blockType != BlockType.payload.rawValue && self.blockType < BlockType.extensionBlockTypeMin.rawValue {
                 throw CanonicalError.canonicalBlockError("Data block type must be payload or extension block")
             }
             if data.isEmpty {
                 throw CanonicalError.canonicalBlockError("Data block must not be empty")
             }
         case .bundleAge(_):
-            if self.blockType != BUNDLE_AGE_BLOCK {
+            if self.blockType != BlockType.bundleAge.rawValue {
                 throw CanonicalError.canonicalBlockError("Bundle age data not matching bundle age block type")
             }
         case .previousNode(let prevEid):
-            if self.blockType != PREVIOUS_NODE_BLOCK {
+            if self.blockType != BlockType.previousNode.rawValue {
                 throw CanonicalError.canonicalBlockError("Previous node data not matching previous node block type")
             }
             // Check if the endpoint ID is valid
@@ -428,7 +430,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     
     /// Get hop count if this is a hop count block
     public func getHopCount() -> (UInt8, UInt8)? {
-        if self.blockType == HOP_COUNT_BLOCK {
+        if self.blockType == BlockType.hopCount.rawValue {
             if case .hopCount(let limit, let count) = self.data {
                 return (limit, count)
             }
@@ -456,7 +458,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     
     /// Get bundle age if this is a bundle age block
     public func getBundleAge() -> UInt64? {
-        if self.blockType == BUNDLE_AGE_BLOCK {
+        if self.blockType == BlockType.bundleAge.rawValue {
             if case .bundleAge(let age) = self.data {
                 return age
             }
@@ -476,7 +478,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     
     /// Get previous node if this is a previous node block
     public func getPreviousNode() -> EndpointID? {
-        if self.blockType == PREVIOUS_NODE_BLOCK {
+        if self.blockType == BlockType.previousNode.rawValue {
             if case .previousNode(let eid) = self.data {
                 return eid
             }
@@ -505,60 +507,64 @@ extension CanonicalBlock: CrcBlock {
     }
 }
 
-// MARK: - Block Factory Methods
+// MARK: - Initializers
 extension CanonicalBlock {
     /// Create a new hop count block
-    public static func newHopCountBlock(
-        blockNumber: UInt64, 
-        blockControlFlags: BlockControlFlags, 
-        limit: UInt8
-    ) throws -> CanonicalBlock {
-        return try CanonicalBlockBuilder()
-            .blockType(HOP_COUNT_BLOCK)
-            .blockNumber(blockNumber)
-            .blockControlFlags(blockControlFlags.rawValue)
-            .data(.hopCount(limit, 0))
-            .build()
+    public init(
+        blockNumber: UInt64,
+        blockControlFlags: BlockControlFlags,
+        hopLimit: UInt8
+    ) throws {
+        self.init(
+            blockType: BlockType.hopCount.rawValue,
+            blockNumber: blockNumber,
+            blockControlFlags: blockControlFlags.rawValue,
+            crc: .crcNo,
+            data: .hopCount(hopLimit, 0)
+        )
     }
     
     /// Create a new payload block
-    public static func newPayloadBlock(
-        blockControlFlags: BlockControlFlags, 
-        data: [UInt8]
-    ) throws -> CanonicalBlock {
-        return try CanonicalBlockBuilder()
-            .blockType(PAYLOAD_BLOCK)
-            .blockNumber(PAYLOAD_BLOCK_NUMBER)
-            .blockControlFlags(blockControlFlags.rawValue)
-            .data(.data(data))
-            .build()
+    public init(
+        blockControlFlags: BlockControlFlags,
+        payloadData: [UInt8]
+    ) throws {
+        self.init(
+            blockType: BlockType.payload.rawValue,
+            blockNumber: BlockType.payload.rawValue,
+            blockControlFlags: blockControlFlags.rawValue,
+            crc: .crcNo,
+            data: .data(payloadData)
+        )
     }
     
     /// Create a new previous node block
-    public static func newPreviousNodeBlock(
-        blockNumber: UInt64, 
-        blockControlFlags: BlockControlFlags, 
+    public init(
+        blockNumber: UInt64,
+        blockControlFlags: BlockControlFlags,
         previousNode: EndpointID
-    ) throws -> CanonicalBlock {
-        return try CanonicalBlockBuilder()
-            .blockType(PREVIOUS_NODE_BLOCK)
-            .blockNumber(blockNumber)
-            .blockControlFlags(blockControlFlags.rawValue)
-            .data(.previousNode(previousNode))
-            .build()
+    ) throws {
+        self.init(
+            blockType: BlockType.previousNode.rawValue,
+            blockNumber: blockNumber,
+            blockControlFlags: blockControlFlags.rawValue,
+            crc: .crcNo,
+            data: .previousNode(previousNode)
+        )
     }
     
     /// Create a new bundle age block
-    public static func newBundleAgeBlock(
-        blockNumber: UInt64, 
-        blockControlFlags: BlockControlFlags, 
-        timeInMillis: UInt64
-    ) throws -> CanonicalBlock {
-        return try CanonicalBlockBuilder()
-            .blockType(BUNDLE_AGE_BLOCK)
-            .blockNumber(blockNumber)
-            .blockControlFlags(blockControlFlags.rawValue)
-            .data(.bundleAge(timeInMillis))
-            .build()
+    public init(
+        blockNumber: UInt64,
+        blockControlFlags: BlockControlFlags,
+        bundleAge: UInt64
+    ) throws {
+        self.init(
+            blockType: BlockType.bundleAge.rawValue,
+            blockNumber: blockNumber,
+            blockControlFlags: blockControlFlags.rawValue,
+            crc: .crcNo,
+            data: .bundleAge(bundleAge)
+        )
     }
 }

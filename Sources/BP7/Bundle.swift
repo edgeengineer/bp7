@@ -21,7 +21,7 @@ public struct Bundle: Equatable, Sendable {
     
     /// Get the payload block of the bundle
     public func payloadBlock() -> CanonicalBlock? {
-        return canonicals.first { $0.blockType == PAYLOAD_BLOCK }
+        return canonicals.first { $0.blockType == BlockType.payload.rawValue }
     }
     
     /// Get the payload data of the bundle
@@ -152,7 +152,7 @@ public struct Bundle: Equatable, Sendable {
         }
         
         // Check for payload block
-        if !canonicals.contains(where: { $0.blockType == PAYLOAD_BLOCK }) {
+        if !canonicals.contains(where: { $0.blockType == BlockType.payload.rawValue }) {
             throw BP7Error.missingPayloadBlock
         }
     }

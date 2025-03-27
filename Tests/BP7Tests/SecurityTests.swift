@@ -73,16 +73,16 @@ struct SecurityTests {
     func testIntegrityProtectedPlaintext() {
         // Create a primary block
         let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
-            .reportTo(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
+            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
             .lifetime(3600)
             .build()
         
         // Create a payload block
         let payloadBlock = try! CanonicalBlockBuilder()
-            .blockType(PAYLOAD_BLOCK)
+            .blockType(BlockType.payload.rawValue)
             .blockNumber(1)
             .blockControlFlags(0)
             .data(.data([0x01, 0x02, 0x03, 0x04]))
@@ -121,7 +121,7 @@ struct SecurityTests {
         let securityTargets: [UInt64] = [1]
         
         // Create security source
-        let securitySource = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//security-source/"))
+        let securitySource = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//security-source/"))
         
         // Create security context parameters
         let securityContextParameters = BibSecurityContextParameter(

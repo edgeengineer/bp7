@@ -66,7 +66,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
         do {
             let data = try encode().encode()
             return CanonicalBlock(
-                blockType: PAYLOAD_BLOCK,
+                blockType: BlockType.payload.rawValue,
                 blockNumber: 1,
                 blockControlFlags: 0,
                 crc: .crcNo,
@@ -75,7 +75,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
         } catch {
             // Return empty payload if encoding fails
             return CanonicalBlock(
-                blockType: PAYLOAD_BLOCK,
+                blockType: BlockType.payload.rawValue,
                 blockNumber: 1,
                 blockControlFlags: 0,
                 crc: .crcNo,

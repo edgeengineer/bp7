@@ -8,9 +8,9 @@ struct PrimaryBlockTests {
     func testPrimaryBlockCreation() {
         // Create a primary block using the builder
         let builder = PrimaryBlockBuilder()
-            .destination(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
-            .reportTo(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
+            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
             .lifetime(3600)
             .bundleControlFlags([.bundleMustNotFragmented])
@@ -38,9 +38,9 @@ struct PrimaryBlockTests {
             version: 7,
             bundleControlFlags: [],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600
         )
@@ -61,9 +61,9 @@ struct PrimaryBlockTests {
             version: 7,
             bundleControlFlags: [.bundleIsFragment],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600,
             fragmentationOffset: 100,
@@ -83,9 +83,9 @@ struct PrimaryBlockTests {
             version: 7,
             bundleControlFlags: [],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: pastTime, sequenceNumber: 1),
             lifetime: 5 // 5 seconds
         )
@@ -99,9 +99,9 @@ struct PrimaryBlockTests {
             version: 7,
             bundleControlFlags: [],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: futureTime, sequenceNumber: 1),
             lifetime: 60
         )
@@ -113,10 +113,10 @@ struct PrimaryBlockTests {
     @Test("Primary Block CBOR Serialization")
     func testPrimaryBlockCborSerialization() throws {
         // Create a primary block
-        let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
-            .reportTo(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
+        let primaryBlock = try PrimaryBlockBuilder()
+            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
             .lifetime(3600)
             .bundleControlFlags([.bundleMustNotFragmented])
@@ -146,9 +146,9 @@ struct PrimaryBlockTests {
             version: 7,
             bundleControlFlags: [],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600
         )
@@ -169,9 +169,9 @@ struct PrimaryBlockTests {
     func testPrimaryBlockBuilder() {
         // Create a primary block using the builder
         let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
-            .reportTo(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
+            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
             .lifetime(3600)
             .build()
@@ -192,7 +192,7 @@ struct PrimaryBlockTests {
     func testPrimaryBlockBuilderValidation() {
         // Create a builder without setting a destination
         let builder = PrimaryBlockBuilder()
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .lifetime(3600)
         
         // Attempt to build, should fail
@@ -211,9 +211,9 @@ struct PrimaryBlockTests {
             version: 6, // Invalid version
             bundleControlFlags: [],
             crc: .crcNo,
-            destination: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
-            source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
+            source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
+            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600
         )
@@ -238,9 +238,9 @@ struct PrimaryBlockTests {
     func testPrimaryBlockCborEncoding() {
         // Create a primary block
         let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
-            .source(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
-            .reportTo(try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
+            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+            .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
+            .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
             .lifetime(3600)
             .bundleControlFlags([.bundleMustNotFragmented])
