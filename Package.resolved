@@ -1,13 +1,13 @@
 {
-  "originHash" : "0e469f48e18923555bafffbe54c4ac4a49880a4687a1e4a47220afcb1b917f6f",
+  "originHash" : "b0f34aa99b241a05b32121ebc26d527ffc5443a28ba59bc6d0f39a629f34c71c",
   "pins" : [
     {
       "identity" : "cbor",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apache-edge/cbor.git",
       "state" : {
-        "revision" : "eb741468c2803322d3535c6333f2237007080a56",
-        "version" : "0.0.1"
+        "revision" : "38d21e5a9956defa34283301c046e480db8955fd",
+        "version" : "0.0.2"
       }
     },
     {
