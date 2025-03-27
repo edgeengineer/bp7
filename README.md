@@ -1,33 +1,61 @@
 # Bundle Protocol Version 7 (BP7)
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS-brightgreen.svg)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS%20Linux%20Windows-brightgreen.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![macOS](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
-[![Linux](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
-[![Windows](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![macOS](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=macOS)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![Linux](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=Linux)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![Windows](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=Windows)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
 
 A cross-platform Swift 6 implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
 
 ## Overview
 
-Bundle Protocol Version 7 (BPv7) is a network protocol designed for Delay-Tolerant Networking (DTN). DTN enables communication in challenging environments with:
+Bundle Protocol Version 7 (BPv7) is a network protocol designed for Disruption Tolerant Networking (DTN). DTN enables communication in challenging environments with:
 
 - Intermittent connectivity
 - Long or variable delays
 - High bit error rates
 - Asymmetric data rates
 
-This Swift package provides a native implementation of BPv7 for Apple, Linux, and Windows platforms, allowing applications to create, process, and manage DTN bundles.
+This Swift package provides a native implementation of BPv7 for Apple platforms (macOS, iOS, tvOS, watchOS, visionOS), Linux, and Windows, allowing applications to create, process, and manage DTN bundles across all major operating systems.
 
 ## Key Features
 
 - **Store-Carry-Forward Overlay Network**: Enables data transmission even when end-to-end connectivity is not available
 - **Late Binding**: Overlay-network endpoint identifiers to underlying network addresses
 - **Scheduled and Opportunistic Connectivity**: Takes advantage of both planned and unplanned connection opportunities
-- **Cross-Platform Support**: Works on macOS, iOS, and tvOS
+- **Cross-Platform Support**: Works on macOS, iOS, tvOS, watchOS, visionOS, Linux, and Windows
 - **Swift 6 Native**: Built with the latest Swift language features
 - **Swift Concurrency Support**: Built with the latest Swift concurrency features
+- **Comprehensive Security**: Supports Bundle Protocol Security (BPSec) as defined in RFC 9172
+- **Extensible Architecture**: Easily add custom block types and processing rules
+
+## Architecture
+
+BP7 implements the Bundle Protocol architecture as defined in RFC 9171, consisting of:
+
+### Core Components
+
+- **Bundle**: The primary data unit in DTN, containing a payload and metadata
+- **Primary Block**: Contains essential routing and identification information
+- **Canonical Blocks**: Extension blocks for additional capabilities
+- **Endpoint IDs**: Identifiers for source and destination endpoints
+- **Creation Timestamps**: Uniquely identifies bundles from the same source
+
+### Security Features
+
+- **Bundle Authentication Block (BAB)**: Provides hop-by-hop authentication
+- **Block Integrity Block (BIB)**: Ensures integrity of specific blocks
+- **Block Confidentiality Block (BCB)**: Encrypts block contents
+- **Security Context Parameters**: Configurable security options
+
+### Cross-Platform Implementation
+
+The codebase uses conditional compilation to ensure compatibility across platforms:
+- Platform-specific imports for system libraries
+- Custom implementations for platform-specific features
+- Consistent API regardless of the underlying platform
 
 ## Installation
 
@@ -50,186 +78,145 @@ Then include "BP7" as a dependency in your target:
 
 ## Usage
 
-### Basic Example
+### Creating and Sending a Bundle
 
 ```swift
 import BP7
 
-// Create endpoint identifiers
-let sourceEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source-node/"))
-let destinationEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination-node/"))
+// Create source and destination endpoints
+let source = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source-node/"))
+let destination = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination-node/"))
 
-// Create a primary block
-let primaryBlock = try! PrimaryBlockBuilder()
-    .version(7)
-    .bundleControlFlags([])
-    .crc(.crc32)
-    .destination(destinationEID)
-    .source(sourceEID)
-    .reportTo(sourceEID) // Report back to source
-    .creationTimestamp(CreationTimestamp(time: DtnTime.currentTime(), sequenceNumber: 1))
-    .lifetime(3600) // 1 hour lifetime
-    .build()
-
-// Create a payload block with data
-let message = "Hello, DTN!"
-let payloadData: [UInt8] = Array(message.utf8)
-let payloadBlock = try! CanonicalBlock.newPayloadBlock(
-    blockControlFlags: [],
-    data: payloadData
+// Create bundle with payload
+let payload = "Hello, DTN World!".data(using: .utf8)!
+var bundle = try Bundle(
+    source: source,
+    destination: destination,
+    payloadBlock: PayloadBlock(payload: payload)
 )
 
-// Create the bundle
-let bundle = Bundle(
-    primary: primaryBlock,
-    canonicals: [payloadBlock]
-)
+// Add a lifetime
+bundle.primaryBlock.lifetime = 86400 // 24 hours in seconds
 
-// Serialize the bundle to CBOR for transmission
-let serializedBundle = try! bundle.toCbor()
+// Serialize the bundle to binary format (CBOR)
+let serializedBundle = try bundle.serialize()
 
-// When receiving a bundle, deserialize it from CBOR
-let receivedBundle = try! Bundle.fromCbor(serializedBundle)
-
-// Access the payload
-if let payload = receivedBundle.payload(),
-   let receivedMessage = String(bytes: payload, encoding: .utf8) {
-    print("Received message: \(receivedMessage)")
-}
+// Send the bundle through your DTN transport layer
+// dtnTransport.send(serializedBundle)
 ```
 
-## Bundle Protocol Concepts
-
-### Endpoints and EIDs
-
-Bundles are addressed to endpoints identified by Endpoint Identifiers (EIDs). BPv7 supports two URI schemes:
-
-1. **dtn scheme**: `dtn://node-name/~service-name`
-2. **ipn scheme**: `ipn:node-number.service-number`
-
-### Bundle Structure
-
-A bundle consists of:
-
-- **Primary Block**: Contains routing information (source, destination, etc.)
-- **Payload Block**: Contains the application data
-- **Extension Blocks**: Optional blocks for additional functionality (Previous Node, Bundle Age, Hop Count, etc.)
-
-### Creating Bundles
-
-BP7 provides a builder pattern for creating bundles. Here's an example of how to create a bundle:
+### Receiving and Processing a Bundle
 
 ```swift
 import BP7
 
-// Create endpoint identifiers
-let sourceEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source-node/"))
-let destinationEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination-node/"))
-let reportToEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to-node/"))
+// Assuming you have received serialized bundle data
+// let receivedData = dtnTransport.receive()
 
-// Create a primary block using PrimaryBlockBuilder
-let primaryBlock = try! PrimaryBlockBuilder()
-    .version(7)
-    .bundleControlFlags([.bundleRequestStatusTime])
-    .crc(.crc32)
-    .destination(destinationEID)
-    .source(sourceEID)
-    .reportTo(reportToEID)
-    .creationTimestamp(CreationTimestamp(time: DtnTime.currentTime(), sequenceNumber: 1))
-    .lifetime(3600) // 1 hour lifetime
-    .build()
+// Deserialize the bundle
+let receivedBundle = try Bundle.deserialize(from: receivedData)
 
-// Create a payload block with data
-let payloadData: [UInt8] = Array("Hello, Bundle Protocol 7!".utf8)
-let payloadBlock = try! CanonicalBlock.newPayloadBlock(
-    blockControlFlags: [],
-    data: payloadData
-)
+// Access bundle information
+let sourceID = receivedBundle.primaryBlock.sourceID
+let destinationID = receivedBundle.primaryBlock.destinationID
+let creationTime = receivedBundle.primaryBlock.creationTimestamp
 
-// Create a hop count block (optional extension block)
-let hopCountBlock = try! CanonicalBlock.newHopCountBlock(
-    blockNumber: 2,
-    blockControlFlags: [],
-    limit: 10
-)
-
-// Create the bundle using BundleBuilder
-let bundle = try! BundleBuilder(primary: primaryBlock)
-    .addCanonical(payloadBlock)
-    .addCanonical(hopCountBlock)
-    .build()
-
-// Alternatively, you can create a bundle directly
-let simpleBundle = Bundle(
-    primary: primaryBlock,
-    canonicals: [payloadBlock, hopCountBlock]
-)
-
-// Access the payload
-if let payload = bundle.payload(), 
-   let message = String(bytes: payload, encoding: .utf8) {
-    print("Bundle payload: \(message)")
+// Process the payload
+if let payloadBlock = receivedBundle.getBlockOfType(BlockType.PAYLOAD) as? PayloadBlock,
+   let payloadString = String(data: payloadBlock.payload, encoding: .utf8) {
+    print("Received message: \(payloadString)")
 }
 ```
 
-### Bundle Processing
-
-The protocol handles:
-
-- Bundle creation and transmission
-- Forwarding and routing
-- Reception and delivery
-- Fragmentation and reassembly
-- Administrative records (status reports)
-
-## Dependencies
-
-- [CBOR](https://github.com/apache-edge/cbor.git) - Concise Binary Object Representation for efficient binary encoding
-
-## Security
-
-Bundle Protocol Security (BPSec) as specified in [RFC 9172](https://www.rfc-editor.org/info/rfc9172) provides security services for the Bundle Protocol. This implementation now includes:
-
-- **Integrity Block (BIB)**: Implements the Bundle Authentication Block (BAB) as defined in [RFC 9172](https://www.rfc-editor.org/info/rfc9172)
-- **BIB-HMAC-SHA2 Security Context**: Implements the integrity mechanism as defined in [RFC 9173](https://www.rfc-editor.org/info/rfc9173)
-- **Integrity Protected Plaintext (IPPT)**: Supports integrity protection for primary blocks, payload blocks, and security headers
-- **Flexible Security Parameters**: Configurable SHA variants (SHA-256, SHA-384, SHA-512) and integrity scope flags
-
-The security implementation allows bundles to be protected against unauthorized modification during transit through untrusted networks.
-
-Example usage:
+### Working with Security Blocks
 
 ```swift
-// Create security parameters with SHA-384
+import BP7
+import Crypto
+
+// Create a bundle with integrity protection
+let source = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//secure-source/"))
+let destination = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//secure-destination/"))
+
+// Create bundle with payload
+let payload = "Secure DTN message".data(using: .utf8)!
+var bundle = try Bundle(
+    source: source,
+    destination: destination,
+    payloadBlock: PayloadBlock(payload: payload)
+)
+
+// Add integrity protection to the payload block
+let securityTargets: [UInt64] = [1] // Target the payload block
+let securitySource = source
 let securityParams = BibSecurityContextParameter(
-    shaVariant: ShaVariantParameter(id: 1, variant: HMAC_SHA_384),
-    wrappedKey: nil,
-    integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: IntegrityScopeFlags.all.rawValue)
+    securityContext: SecurityContext.SHA256,
+    securitySource: securitySource
 )
 
-// Create an integrity block to protect a payload block
-let integrityBlock = try IntegrityBlockBuilder()
-    .securityTargets([1]) // Target the payload block (block number 1)
-    .securityContextFlags(SEC_CONTEXT_PRESENT)
-    .securitySource(myNodeEndpoint)
-    .securityContextParameters(securityParams)
-    .build()
+// Create and add the Block Integrity Block
+let bib = try BlockIntegrityBlock(
+    securityTargets: securityTargets,
+    securityContextParameters: securityParams
+)
+try bundle.addBlock(bib)
 
-// Compute HMAC for the target block
-try integrityBlock.computeHmac(keyBytes: sharedSecretKey, ipptList: [(1, ipptData)])
+// Serialize the bundle
+let serializedBundle = try bundle.serialize()
 ```
 
-## References
+## Advanced Features
 
-- [RFC 9171: Bundle Protocol Version 7](https://www.rfc-editor.org/rfc/rfc9171.txt)
-- [RFC 9172: Bundle Protocol Security (BPSec)](https://www.rfc-editor.org/info/rfc9172)
-- [RFC 9173: Bundle Protocol Security (BPSec) - BIB-HMAC-SHA2](https://www.rfc-editor.org/info/rfc9173)
-- [RFC 4838: Delay-Tolerant Networking Architecture](https://www.rfc-editor.org/info/rfc4838)
+### Custom Block Types
 
-## License
+You can extend BP7 with custom block types by implementing the `CanonicalBlock` protocol:
 
-This project is licensed under the Apache License, Version 2.0 - see the LICENSE file for details.
+```swift
+import BP7
+
+public final class MyCustomBlock: CanonicalBlock {
+    public static let blockType: UInt64 = 194 // Choose a number in the private range
+    
+    // Your custom properties
+    public var customData: Data
+    
+    // Implementation of required methods
+    // ...
+}
+```
+
+### Fragmentation and Reassembly
+
+BP7 supports bundle fragmentation for large payloads:
+
+```swift
+import BP7
+
+// Fragment a large bundle
+let fragments = try bundle.fragment(maxFragmentSize: 1024)
+
+// Reassemble fragments
+let reassembledBundle = try Bundle.reassemble(fragments: receivedFragments)
+```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions to BP7 are welcome! Here's how you can help:
+
+1. **Report Issues**: File bugs or feature requests on the GitHub issue tracker
+2. **Submit Pull Requests**: Implement new features or fix bugs
+3. **Improve Documentation**: Help make the documentation more comprehensive
+4. **Cross-Platform Testing**: Test the library on different platforms
+
+Please ensure your code follows the Swift style guidelines and includes appropriate tests.
+
+## License
+
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- The Bundle Protocol specification (RFC 9171)
+- The Bundle Security Protocol specification (RFC 9172)
+- The Apache Edge community
+- Largely based on the [https://github.com/dtn7/bp7-rs](https://github.com/dtn7/bp7-rs) Rust implementation 
