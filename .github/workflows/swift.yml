@@ -1,33 +1,75 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# GitHub recommends pinning actions to a commit SHA.
-# To get a newer version, you will need to update the SHA.
-# You can also reference a tag or branch, but the action may change without warning.
-
-name: Swift
+name: swift
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master, develop ]
 
 jobs:
-  build:
-    name: Swift 6.0 on ${{ matrix.os }}
+  # Build and test on multiple platforms
+  build-and-test:
+    name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        swift: ["6.0.0"]
     steps:
-      - uses: swift-actions/setup-swift@65540b95f51493d65f5e59e97dcef9629ddf11bf
-        with:
-          swift-version: "6.0"
-      - uses: actions/checkout@v4
-      - name: Build
-        run: swift build
-      - name: Run tests
-        run: swift test
+    - uses: actions/checkout@v4
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: ${{ matrix.swift }}
+    - name: Build
+      run: swift build -c release
+    - name: Run tests with Swift Testing
+      run: swift test
+
+  # Generate documentation and deploy to GitHub Pages
+  pages:
+    name: Generate and Deploy Documentation
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Allow only one concurrent deployment
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: "6.0.0"
+    - name: Setup Pages
+      id: pages
+      uses: actions/configure-pages@v4
+    - name: Generate DocC Documentation
+      run: |
+        # Generate the documentation
+        swift package --allow-writing-to-directory ./docs generate-documentation \
+          --target CBOR \
+          --disable-indexing \
+          --transform-for-static-hosting \
+          --output-path ./docs
+        
+        # Create .nojekyll file to disable Jekyll processing
+        touch ./docs/.nojekyll
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./docs
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
