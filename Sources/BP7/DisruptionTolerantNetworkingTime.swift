@@ -11,7 +11,7 @@ import Dispatch
 #endif
 
 // Import pthread for Linux
-#if os(Linux)
+#if os(Linux) || os(Windows)
 import Glibc
 #endif
 
@@ -42,8 +42,8 @@ public extension DisruptionTolerantNetworkingTime {
         let timeInterval = TimeInterval((self + DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K) / 1000)
         let date = Date(timeIntervalSince1970: timeInterval)
         
-        #if os(Linux)
-        // Simple ISO8601 formatter for Linux - manual implementation
+        #if os(Linux) || os(Windows)
+        // Simple ISO8601 formatter for Linux and Windows - manual implementation
         let calendar = Calendar(identifier: .gregorian)
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
         
@@ -152,7 +152,7 @@ public struct CreationTimestamp: Equatable, Hashable, Sendable, CustomStringConv
 // MARK: - Thread-safe Sequence Generator (Synchronous version)
 /// A class to generate sequence numbers in a thread-safe manner
 final class SyncSequenceGenerator: @unchecked Sendable {
-    #if canImport(Dispatch) && !os(Linux)
+    #if canImport(Dispatch) && !os(Linux) && !os(Windows)
     // Using a dispatch queue for synchronization on Apple platforms
     private let queue = DispatchQueue(label: "com.bp7.dtntime.sequence")
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
@@ -171,7 +171,7 @@ final class SyncSequenceGenerator: @unchecked Sendable {
         }
     }
     #else
-    // Thread-safe implementation for Linux using a simple mutex
+    // Thread-safe implementation for Linux and Windows using a simple mutex
     private var mutex = pthread_mutex_t()
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
