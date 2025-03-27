@@ -7,7 +7,7 @@
 [![Linux](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
 [![Windows](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
 
-A cross-platform Swift implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
+A cross-platform Swift 6 implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
 
 ## Overview
 
@@ -18,7 +18,7 @@ Bundle Protocol Version 7 (BPv7) is a network protocol designed for Delay-Tolera
 - High bit error rates
 - Asymmetric data rates
 
-This Swift package provides a native implementation of BPv7 for Apple platforms, allowing applications to create, process, and manage DTN bundles.
+This Swift package provides a native implementation of BPv7 for Apple, Linux, and Windows platforms, allowing applications to create, process, and manage DTN bundles.
 
 ## Key Features
 
@@ -27,6 +27,7 @@ This Swift package provides a native implementation of BPv7 for Apple platforms,
 - **Scheduled and Opportunistic Connectivity**: Takes advantage of both planned and unplanned connection opportunities
 - **Cross-Platform Support**: Works on macOS, iOS, and tvOS
 - **Swift 6 Native**: Built with the latest Swift language features
+- **Swift Concurrency Support**: Built with the latest Swift concurrency features
 
 ## Installation
 
