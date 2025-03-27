@@ -10,9 +10,11 @@ import Foundation
 import Dispatch
 #endif
 
-// Import pthread for Linux
-#if os(Linux) || os(Windows)
+// Import system libraries based on platform
+#if os(Linux)
 import Glibc
+#elseif os(Windows)
+import WinSDK
 #endif
 
 /// Time since the year 2k in milliseconds
@@ -42,8 +44,23 @@ public extension DisruptionTolerantNetworkingTime {
         let timeInterval = TimeInterval((self + DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K) / 1000)
         let date = Date(timeIntervalSince1970: timeInterval)
         
-        #if os(Linux) || os(Windows)
-        // Simple ISO8601 formatter for Linux and Windows - manual implementation
+        #if os(Linux)
+        // Simple ISO8601 formatter for Linux - manual implementation
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+        
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        let second = components.second ?? 0
+        let milliseconds = (components.nanosecond ?? 0) / 1_000_000
+        
+        return String(format: "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", 
+                     year, month, day, hour, minute, second, milliseconds)
+        #elseif os(Windows)
+        // Simple ISO8601 formatter for Windows - manual implementation
         let calendar = Calendar(identifier: .gregorian)
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
         
@@ -170,8 +187,8 @@ final class SyncSequenceGenerator: @unchecked Sendable {
             return lastSequence
         }
     }
-    #else
-    // Thread-safe implementation for Linux and Windows using a simple mutex
+    #elseif os(Linux)
+    // Thread-safe implementation for Linux using a simple mutex
     private var mutex = pthread_mutex_t()
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
@@ -187,6 +204,29 @@ final class SyncSequenceGenerator: @unchecked Sendable {
     func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
         pthread_mutex_lock(&mutex)
         defer { pthread_mutex_unlock(&mutex) }
+        
+        if timestamp != lastTimestamp {
+            lastTimestamp = timestamp
+            lastSequence = 0
+        } else {
+            lastSequence += 1
+        }
+        
+        return lastSequence
+    }
+    #elseif os(Windows)
+    // Thread-safe implementation for Windows using SRWLOCK
+    private var lock = SRWLOCK()
+    private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
+    private var lastSequence: UInt64 = 0
+    
+    init() {
+        InitializeSRWLock(&lock)
+    }
+    
+    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
+        AcquireSRWLockExclusive(&lock)
+        defer { ReleaseSRWLockExclusive(&lock) }
         
         if timestamp != lastTimestamp {
             lastTimestamp = timestamp

@@ -162,7 +162,7 @@ struct SecurityTests {
         let securityTargets: [UInt64] = [1]
         
         // Create security source
-        let securitySource = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//security-source/"))
+        let securitySource = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//security-source/"))
         
         // Create security context parameters with SHA-256
         let securityContextParameters = BibSecurityContextParameter(
