@@ -153,8 +153,7 @@ let hopCountBlock = try! CanonicalBlock.newHopCountBlock(
 )
 
 // Create the bundle using BundleBuilder
-let bundle = try! BundleBuilder()
-    .primary(primaryBlock)
+let bundle = try! BundleBuilder(primary: primaryBlock)
     .addCanonical(payloadBlock)
     .addCanonical(hopCountBlock)
     .build()

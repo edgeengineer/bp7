@@ -182,7 +182,7 @@ public struct Bundle: Equatable, Sendable {
 
 /// Builder for creating bundles
 public struct BundleBuilder {
-    private var primary: PrimaryBlock
+    private let primary: PrimaryBlock
     private var canonicals: [CanonicalBlock] = []
     
     /// Create a new bundle builder with a required primary block
@@ -190,14 +190,7 @@ public struct BundleBuilder {
         self.primary = primary
     }
     
-    /// Update the primary block
-    public func primary(_ primary: PrimaryBlock) -> BundleBuilder {
-        var builder = self
-        builder.primary = primary
-        return builder
-    }
-    
-    /// Set the canonical blocks
+    /// Sets and overwrites the canonical blocks
     public func canonicals(_ canonicals: [CanonicalBlock]) -> BundleBuilder {
         var builder = self
         builder.canonicals = canonicals
