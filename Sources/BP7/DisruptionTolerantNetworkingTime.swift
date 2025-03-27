@@ -10,6 +10,11 @@ import Foundation
 import Dispatch
 #endif
 
+// Import pthread for Linux
+#if os(Linux)
+import Glibc
+#endif
+
 /// Time since the year 2k in milliseconds
 public typealias DisruptionTolerantNetworkingTime = UInt64
 
@@ -166,14 +171,22 @@ final class SyncSequenceGenerator: @unchecked Sendable {
         }
     }
     #else
-    // Thread-safe implementation for Linux using a simple lock
-    private let lock = NSLock()
+    // Thread-safe implementation for Linux using a simple mutex
+    private var mutex = pthread_mutex_t()
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
     
+    init() {
+        pthread_mutex_init(&mutex, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&mutex)
+    }
+    
     func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
-        lock.lock()
-        defer { lock.unlock() }
+        pthread_mutex_lock(&mutex)
+        defer { pthread_mutex_unlock(&mutex) }
         
         if timestamp != lastTimestamp {
             lastTimestamp = timestamp
