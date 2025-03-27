@@ -38,12 +38,20 @@ public extension DisruptionTolerantNetworkingTime {
         let date = Date(timeIntervalSince1970: timeInterval)
         
         #if os(Linux)
-        // Simple ISO8601 formatter for Linux
-        let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 1000)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        let baseString = formatter.string(from: date)
-        return baseString + String(format: ".%03dZ", milliseconds)
+        // Simple ISO8601 formatter for Linux - manual implementation
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+        
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        let second = components.second ?? 0
+        let milliseconds = (components.nanosecond ?? 0) / 1_000_000
+        
+        return String(format: "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", 
+                     year, month, day, hour, minute, second, milliseconds)
         #else
         // Use ISO8601DateFormatter on Apple platforms
         let formatter = ISO8601DateFormatter()
@@ -158,26 +166,15 @@ final class SyncSequenceGenerator: @unchecked Sendable {
         }
     }
     #else
-    // Using actor-based isolation for Linux and other platforms
-    // This provides thread safety without platform-specific locks
-    private let sequenceActor = SequenceActor()
-    
-    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
-        // Run synchronously on the actor
-        let task = Task {
-            await sequenceActor.nextSequence(for: timestamp)
-        }
-        return task.value
-    }
-    #endif
-}
-
-// Helper actor for thread-safe sequence generation on Linux
-actor SequenceActor {
+    // Thread-safe implementation for Linux using a simple lock
+    private let lock = NSLock()
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
     
     func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
+        lock.lock()
+        defer { lock.unlock() }
+        
         if timestamp != lastTimestamp {
             lastTimestamp = timestamp
             lastSequence = 0
@@ -187,6 +184,7 @@ actor SequenceActor {
         
         return lastSequence
     }
+    #endif
 }
 
 // MARK: - Thread-safe Sequence Generator (Asynchronous version)
