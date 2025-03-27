@@ -182,13 +182,15 @@ public struct Bundle: Equatable, Sendable {
 
 /// Builder for creating bundles
 public struct BundleBuilder {
-    private var primary: PrimaryBlock?
+    private var primary: PrimaryBlock
     private var canonicals: [CanonicalBlock] = []
     
-    /// Create a new bundle builder
-    public init() {}
+    /// Create a new bundle builder with a required primary block
+    public init(primary: PrimaryBlock) {
+        self.primary = primary
+    }
     
-    /// Set the primary block
+    /// Update the primary block
     public func primary(_ primary: PrimaryBlock) -> BundleBuilder {
         var builder = self
         builder.primary = primary
@@ -210,25 +212,7 @@ public struct BundleBuilder {
     }
     
     /// Build the bundle
-    public func build() throws -> Bundle {
-        guard let primary = primary else {
-            throw BundleBuilderError.noPrimaryBlock
-        }
-        
+    public func build() -> Bundle {
         return Bundle(primary: primary, canonicals: canonicals)
-    }
-}
-
-/// Error types for the bundle builder
-public enum BundleBuilderError: Error, Equatable, CustomStringConvertible {
-    /// No primary block was provided
-    case noPrimaryBlock
-    
-    /// Human-readable description of the error
-    public var description: String {
-        switch self {
-        case .noPrimaryBlock:
-            return "No primary block was provided"
-        }
     }
 }

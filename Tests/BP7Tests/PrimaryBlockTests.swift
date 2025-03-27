@@ -78,7 +78,7 @@ struct PrimaryBlockTests {
     @Test("Primary Block Lifetime")
     func testPrimaryBlockLifetime() {
         // Create a primary block with a timestamp in the past
-        let pastTime = DtnTime.now() - 10000 // 10 seconds ago
+        let pastTime = DisruptionTolerantNetworkingTime.now() - 10000 // 10 seconds ago
         let expiredBlock = PrimaryBlock(
             version: 7,
             bundleControlFlags: [],
@@ -90,10 +90,11 @@ struct PrimaryBlockTests {
             lifetime: 5 // 5 seconds
         )
         
-        #expect(expiredBlock.isLifetimeExceeded)
+        // Test that the block is expired
+        #expect(expiredBlock.hasExpired())
         
         // Create a primary block with a timestamp in the future
-        let futureTime = DtnTime.now() + 10000 // 10 seconds in the future
+        let futureTime = DisruptionTolerantNetworkingTime.now() + 10000 // 10 seconds in the future
         let unexpiredBlock = PrimaryBlock(
             version: 7,
             bundleControlFlags: [],
@@ -102,10 +103,11 @@ struct PrimaryBlockTests {
             source: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
             reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: futureTime, sequenceNumber: 1),
-            lifetime: 3600
+            lifetime: 60
         )
         
-        #expect(!unexpiredBlock.isLifetimeExceeded)
+        // Test that the block is not expired
+        #expect(!unexpiredBlock.hasExpired())
     }
     
     @Test("Primary Block CBOR Serialization")

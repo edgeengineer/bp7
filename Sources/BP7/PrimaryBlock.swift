@@ -228,13 +228,13 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
         return bundleControlFlags.contains(.bundleIsFragment)
     }
     
-    /// Checks if the bundle's lifetime has been exceeded
-    public var isLifetimeExceeded: Bool {
-        if creationTimestamp.getDtnTime() == 0 {
+    /// Check if the bundle has expired based on its creation timestamp and lifetime
+    public func hasExpired() -> Bool {
+        if lifetime == 0 {
             return false
         }
         
-        let now = DtnTime.now()
+        let now = DisruptionTolerantNetworkingTime.now()
         return creationTimestamp.getDtnTime() + UInt64(lifetime * 1000) <= now
     }
     

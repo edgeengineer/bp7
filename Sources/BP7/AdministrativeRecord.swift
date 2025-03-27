@@ -8,11 +8,11 @@ import CBOR
 /// Type code for administrative records
 public typealias AdministrativeRecordTypeCode = UInt32
 
-/// Bundle status report type code
-public let BUNDLE_STATUS_REPORT_TYPE_CODE: AdministrativeRecordTypeCode = 1
-
 /// Represents an administrative record in a bundle
 public enum AdministrativeRecord: Equatable, Hashable, Sendable {
+    /// Bundle status report type code
+    public static let BUNDLE_STATUS_REPORT_TYPE_CODE: AdministrativeRecordTypeCode = 1
+    
     /// Bundle status report
     case bundleStatusReport(StatusReport)
     
@@ -27,7 +27,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
         switch self {
         case .bundleStatusReport(let statusReport):
             return .array([
-                .unsignedInt(UInt64(BUNDLE_STATUS_REPORT_TYPE_CODE)),
+                .unsignedInt(UInt64(AdministrativeRecord.BUNDLE_STATUS_REPORT_TYPE_CODE)),
                 try statusReport.encode()
             ])
         case .unknown(let code, let data), .mismatched(let code, let data):
@@ -50,7 +50,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
         
         let code = AdministrativeRecordTypeCode(codeValue)
         
-        if code == BUNDLE_STATUS_REPORT_TYPE_CODE {
+        if code == AdministrativeRecord.BUNDLE_STATUS_REPORT_TYPE_CODE {
             let statusReport = try StatusReport.decode(from: items[1])
             return .bundleStatusReport(statusReport)
         } else {
@@ -86,43 +86,93 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
 }
 
 /// Reason codes for bundle status reports
-public typealias StatusReportReason = UInt32
+public typealias StatusReportReasonCode = UInt32
 
-/// No additional information
-public let NO_INFORMATION: StatusReportReason = 0
-
-/// Lifetime expired
-public let LIFETIME_EXPIRED: StatusReportReason = 1
-
-/// Forwarded over unidirectional link
-public let FORWARD_UNIDIRECTIONAL_LINK: StatusReportReason = 2
-
-/// Transmission canceled
-public let TRANSMISSION_CANCELED: StatusReportReason = 3
-
-/// Depleted storage
-public let DEPLETED_STORAGE: StatusReportReason = 4
-
-/// Destination endpoint ID unavailable
-public let DEST_ENDPOINT_UNINTELLIGIBLE: StatusReportReason = 5
-
-/// No known route to destination from here
-public let NO_ROUTE_TO_DESTINATION: StatusReportReason = 6
-
-/// No timely contact with next node on route
-public let NO_NEXT_NODE_CONTACT: StatusReportReason = 7
-
-/// Block unintelligible
-public let BLOCK_UNINTELLIGIBLE: StatusReportReason = 8
-
-/// Hop limit exceeded
-public let HOP_LIMIT_EXCEEDED: StatusReportReason = 9
-
-/// Traffic pared
-public let TRAFFIC_PARED: StatusReportReason = 10
-
-/// Block unsupported
-public let BLOCK_UNSUPPORTED: StatusReportReason = 11
+/// Reason codes for bundle status reports
+public enum StatusReportReason: Equatable, Hashable, Sendable, RawRepresentable {
+    /// No additional information
+    case noInformation
+    
+    /// Lifetime expired
+    case lifetimeExpired
+    
+    /// Forwarded over unidirectional link
+    case forwardUnidirectionalLink
+    
+    /// Transmission canceled
+    case transmissionCanceled
+    
+    /// Depleted storage
+    case depletedStorage
+    
+    /// Destination endpoint ID unavailable
+    case destEndpointUnintelligible
+    
+    /// No known route to destination from here
+    case noRouteToDestination
+    
+    /// No timely contact with next node on route
+    case noNextNodeContact
+    
+    /// Block unintelligible
+    case blockUnintelligible
+    
+    /// Hop limit exceeded
+    case hopLimitExceeded
+    
+    /// Traffic pared
+    case trafficPared
+    
+    /// Block unsupported
+    case blockUnsupported
+    
+    /// Custom reason code
+    case custom(StatusReportReasonCode)
+    
+    /// The raw type that can be used to represent all values of the conforming
+    /// type.
+    public typealias RawValue = StatusReportReasonCode
+    
+    /// Creates a new instance with the specified raw value.
+    ///
+    /// - Parameter rawValue: The raw value to use for the new instance.
+    public init?(rawValue: StatusReportReasonCode) {
+        switch rawValue {
+        case 0: self = .noInformation
+        case 1: self = .lifetimeExpired
+        case 2: self = .forwardUnidirectionalLink
+        case 3: self = .transmissionCanceled
+        case 4: self = .depletedStorage
+        case 5: self = .destEndpointUnintelligible
+        case 6: self = .noRouteToDestination
+        case 7: self = .noNextNodeContact
+        case 8: self = .blockUnintelligible
+        case 9: self = .hopLimitExceeded
+        case 10: self = .trafficPared
+        case 11: self = .blockUnsupported
+        default: self = .custom(rawValue)
+        }
+    }
+    
+    /// The corresponding value of the raw type.
+    public var rawValue: StatusReportReasonCode {
+        switch self {
+        case .noInformation: return 0
+        case .lifetimeExpired: return 1
+        case .forwardUnidirectionalLink: return 2
+        case .transmissionCanceled: return 3
+        case .depletedStorage: return 4
+        case .destEndpointUnintelligible: return 5
+        case .noRouteToDestination: return 6
+        case .noNextNodeContact: return 7
+        case .blockUnintelligible: return 8
+        case .hopLimitExceeded: return 9
+        case .trafficPared: return 10
+        case .blockUnsupported: return 11
+        case .custom(let code): return code
+        }
+    }
+}
 
 /// Bundle status item, used in the bundle status information array
 public struct BundleStatusItem: Equatable, Hashable, Sendable {
@@ -130,16 +180,26 @@ public struct BundleStatusItem: Equatable, Hashable, Sendable {
     public let asserted: Bool
     
     /// Time of the status
-    public let time: DtnTime
+    public let time: DisruptionTolerantNetworkingTime
     
     /// Whether status time was requested
     public let statusRequested: Bool
     
     /// Create a new bundle status item
-    public init(asserted: Bool, time: DtnTime = 0, statusRequested: Bool = false) {
+    public init(asserted: Bool, time: DisruptionTolerantNetworkingTime = 0, statusRequested: Bool = false) {
         self.asserted = asserted
         self.time = time
         self.statusRequested = statusRequested
+    }
+    
+    /// Convenience initializer for a new bundle status item with the given assertion status
+    public init(asserted: Bool) {
+        self.init(asserted: asserted, time: 0, statusRequested: false)
+    }
+    
+    /// Convenience initializer for a new time reporting bundle status item
+    public init(timeReporting time: DisruptionTolerantNetworkingTime) {
+        self.init(asserted: true, time: time, statusRequested: true)
     }
     
     /// Convert the bundle status item to CBOR format
@@ -162,7 +222,7 @@ public struct BundleStatusItem: Equatable, Hashable, Sendable {
         }
         
         var statusRequested = false
-        var time: DtnTime = 0
+        var time: DisruptionTolerantNetworkingTime = 0
         
         if items.count > 1 && asserted {
             statusRequested = true
@@ -180,33 +240,31 @@ public struct BundleStatusItem: Equatable, Hashable, Sendable {
     }
 }
 
-/// Create a new bundle status item with the given assertion status
-public func newBundleStatusItem(asserted: Bool) -> BundleStatusItem {
-    return BundleStatusItem(asserted: asserted)
-}
-
-/// Create a new time reporting bundle status item
-public func newTimeReportingBundleStatusItem(time: DtnTime) -> BundleStatusItem {
-    return BundleStatusItem(asserted: true, time: time, statusRequested: true)
-}
+/// Status information position in a status report
+public typealias StatusInformationPosCode = UInt32
 
 /// Status information position in a status report
-public typealias StatusInformationPos = UInt32
-
-/// Maximum number of status information positions
-public let MAX_STATUS_INFORMATION_POS: UInt32 = 4
-
-/// Indicating the reporting node received this bundle
-public let RECEIVED_BUNDLE: StatusInformationPos = 0
-
-/// Indicating the reporting node forwarded this bundle
-public let FORWARDED_BUNDLE: StatusInformationPos = 1
-
-/// Indicating the reporting node delivered this bundle
-public let DELIVERED_BUNDLE: StatusInformationPos = 2
-
-/// Indicating the reporting node deleted this bundle
-public let DELETED_BUNDLE: StatusInformationPos = 3
+public enum StatusInformationPos: StatusInformationPosCode, Equatable, Hashable, Sendable, CaseIterable {
+    /// Maximum number of status information positions
+    public static let maxPositions: StatusInformationPosCode = 4
+    
+    /// Indicating the reporting node received this bundle
+    case receivedBundle = 0
+    
+    /// Indicating the reporting node forwarded this bundle
+    case forwardedBundle = 1
+    
+    /// Indicating the reporting node delivered this bundle
+    case deliveredBundle = 2
+    
+    /// Indicating the reporting node deleted this bundle
+    case deletedBundle = 3
+    
+    /// All possible cases
+    public static var allCases: [StatusInformationPos] {
+        return [.receivedBundle, .forwardedBundle, .deliveredBundle, .deletedBundle]
+    }
+}
 
 /// Bundle status report
 public struct StatusReport: Equatable, Hashable, Sendable {
@@ -225,10 +283,10 @@ public struct StatusReport: Equatable, Hashable, Sendable {
     /// Fragmentation offset (if bundle is fragmented)
     public let fragOffset: UInt64
     
-    /// Fragmentation length (if bundle is fragmented)
+    /// Fragment length (if bundle is fragmented)
     public let fragLen: UInt64
     
-    /// Create a new status report
+    /// Create a status report with the given parameters
     public init(
         statusInformation: [BundleStatusItem],
         reportReason: StatusReportReason,
@@ -243,6 +301,41 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         self.timestamp = timestamp
         self.fragOffset = fragOffset
         self.fragLen = fragLen
+    }
+    
+    /// Create a new status report for the given bundle
+    public init(
+        bundle: Bundle,
+        statusItem: StatusInformationPos,
+        reason: StatusReportReason
+    ) {
+        var statusInformation: [BundleStatusItem] = []
+        
+        // Create status information array
+        for i in 0..<StatusInformationPos.maxPositions {
+            if i == statusItem.rawValue && bundle.primary.bundleControlFlags.contains(.bundleRequestStatusTime) {
+                statusInformation.append(BundleStatusItem(timeReporting: DisruptionTolerantNetworkingTime.now()))
+            } else if i == statusItem.rawValue {
+                statusInformation.append(BundleStatusItem(asserted: true))
+            } else {
+                statusInformation.append(BundleStatusItem(asserted: false))
+            }
+        }
+        
+        // Set basic properties
+        self.statusInformation = statusInformation
+        self.reportReason = reason
+        self.sourceNode = bundle.primary.source
+        self.timestamp = bundle.primary.creationTimestamp
+        
+        // Add fragmentation information if present
+        if bundle.primary.hasFragmentation {
+            self.fragOffset = bundle.primary.fragmentationOffset
+            self.fragLen = bundle.primary.totalDataLength
+        } else {
+            self.fragOffset = 0
+            self.fragLen = 0
+        }
     }
     
     /// Get a reference string for the bundle
@@ -263,7 +356,7 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         items.append(.array(statusItems))
         
         // Add report reason
-        items.append(.unsignedInt(UInt64(reportReason)))
+        items.append(.unsignedInt(UInt64(reportReason.rawValue)))
         
         // Add source node
         items.append(try sourceNode.encode())
@@ -300,7 +393,8 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         guard case .unsignedInt(let reasonValue) = items[1] else {
             throw BP7Error.invalidStatusReport
         }
-        let reportReason = StatusReportReason(reasonValue)
+        let reasonCode = StatusReportReasonCode(reasonValue)
+        let reportReason = StatusReportReason(rawValue: reasonCode) ?? .custom(reasonCode)
         
         // Decode source node
         let sourceNode = try EndpointID(from: items[2])
@@ -338,93 +432,47 @@ public struct StatusReport: Equatable, Hashable, Sendable {
             fragLen: fragLen
         )
     }
-}
-
-/// Create a new status report for the given bundle
-public func newStatusReport(
-    bundle: Bundle,
-    statusItem: StatusInformationPos,
-    reason: StatusReportReason
-) -> StatusReport {
-    var statusInformation: [BundleStatusItem] = []
     
-    // Create status information array
-    for i in 0..<MAX_STATUS_INFORMATION_POS {
-        if i == statusItem && bundle.primary.bundleControlFlags.contains(.bundleRequestStatusTime) {
-            statusInformation.append(newTimeReportingBundleStatusItem(time: DtnTime.now()))
-        } else if i == statusItem {
-            statusInformation.append(newBundleStatusItem(asserted: true))
-        } else {
-            statusInformation.append(newBundleStatusItem(asserted: false))
-        }
-    }
-    
-    // Create status report
-    var sr = StatusReport(
-        statusInformation: statusInformation,
-        reportReason: reason,
-        sourceNode: bundle.primary.source,
-        timestamp: bundle.primary.creationTimestamp,
-        fragOffset: 0,
-        fragLen: 0
-    )
-    
-    // Add fragmentation information if present
-    if bundle.primary.hasFragmentation {
-        // TODO: Add fragmentation support
-        // For now, we'll just use the values from the primary block
-        sr = StatusReport(
-            statusInformation: statusInformation,
-            reportReason: reason,
-            sourceNode: bundle.primary.source,
-            timestamp: bundle.primary.creationTimestamp,
-            fragOffset: bundle.primary.fragmentationOffset,
-            fragLen: bundle.primary.totalDataLength
+    /// Create a new bundle containing a status report
+    public static func newBundle(
+        origBundle: Bundle,
+        source: EndpointID,
+        crcType: CrcValue,
+        status: StatusInformationPos,
+        reason: StatusReportReason
+    ) -> Bundle {
+        // Create status report
+        let statusReport = StatusReport(
+            bundle: origBundle,
+            statusItem: status,
+            reason: reason
         )
+        
+        // Create administrative record
+        let admRecord = AdministrativeRecord.bundleStatusReport(statusReport)
+        
+        // Create primary block
+        let primaryBlock = try! PrimaryBlockBuilder()
+            .destination(origBundle.primary.reportTo)
+            .source(source)
+            .reportTo(source)
+            .bundleControlFlags([.bundleAdministrativeRecordPayload])
+            .creationTimestamp(CreationTimestamp())
+            .lifetime(origBundle.primary.lifetime)
+            .crc(crcType)
+            .build()
+        
+        // Create bundle
+        var bundle = Bundle(
+            primary: primaryBlock,
+            canonicals: [admRecord.toPayload()]
+        )
+        
+        // Set CRC if needed
+        if crcType != .crcNo {
+            bundle.setCrc(crcType)
+        }
+        
+        return bundle
     }
-    
-    return sr
-}
-
-/// Create a new bundle containing a status report
-public func newStatusReportBundle(
-    origBundle: Bundle,
-    source: EndpointID,
-    crcType: CrcValue,
-    status: StatusInformationPos,
-    reason: StatusReportReason
-) -> Bundle {
-    // Create status report
-    let statusReport = newStatusReport(
-        bundle: origBundle,
-        statusItem: status,
-        reason: reason
-    )
-    
-    // Create administrative record
-    let admRecord = AdministrativeRecord.bundleStatusReport(statusReport)
-    
-    // Create primary block
-    let primaryBlock = try! PrimaryBlockBuilder()
-        .destination(origBundle.primary.reportTo)
-        .source(source)
-        .reportTo(source)
-        .bundleControlFlags([.bundleAdministrativeRecordPayload])
-        .creationTimestamp(CreationTimestamp())
-        .lifetime(origBundle.primary.lifetime)
-        .crc(crcType)
-        .build()
-    
-    // Create bundle
-    var bundle = Bundle(
-        primary: primaryBlock,
-        canonicals: [admRecord.toPayload()]
-    )
-    
-    // Set CRC if needed
-    if crcType != .crcNo {
-        bundle.setCrc(crcType)
-    }
-    
-    return bundle
 }

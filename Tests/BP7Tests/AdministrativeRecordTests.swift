@@ -6,14 +6,14 @@ struct AdministrativeRecordTests {
     @Test("Bundle Status Item")
     func testBundleStatusItem() {
         // Test creating a bundle status item
-        let item1 = newBundleStatusItem(asserted: true)
+        let item1 = BundleStatusItem(asserted: true)
         #expect(item1.asserted)
         #expect(!item1.statusRequested)
         #expect(item1.time == 0)
         
         // Test creating a time reporting bundle status item
-        let time: DtnTime = 12345
-        let item2 = newTimeReportingBundleStatusItem(time: time)
+        let time: DisruptionTolerantNetworkingTime = 12345
+        let item2 = BundleStatusItem(timeReporting: time)
         #expect(item2.asserted)
         #expect(item2.statusRequested)
         #expect(item2.time == time)
@@ -43,23 +43,23 @@ struct AdministrativeRecordTests {
         let sourceNode = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/"))
         let timestamp = CreationTimestamp(time: 1000, sequenceNumber: 1)
         let statusItems = [
-            newBundleStatusItem(asserted: true),
-            newBundleStatusItem(asserted: false),
-            newTimeReportingBundleStatusItem(time: 12345),
-            newBundleStatusItem(asserted: false)
+            BundleStatusItem(asserted: true),
+            BundleStatusItem(asserted: false),
+            BundleStatusItem(timeReporting: 12345),
+            BundleStatusItem(asserted: false)
         ]
         
         // Create status report
         let statusReport = StatusReport(
             statusInformation: statusItems,
-            reportReason: NO_INFORMATION,
+            reportReason: .noInformation,
             sourceNode: sourceNode,
             timestamp: timestamp
         )
         
         // Test properties
         #expect(statusReport.statusInformation.count == 4)
-        #expect(statusReport.reportReason == NO_INFORMATION)
+        #expect(statusReport.reportReason == .noInformation)
         #expect(statusReport.sourceNode == sourceNode)
         #expect(statusReport.timestamp.getDtnTime() == timestamp.getDtnTime())
         #expect(statusReport.timestamp.getSequenceNumber() == timestamp.getSequenceNumber())
@@ -94,16 +94,16 @@ struct AdministrativeRecordTests {
         let sourceNode = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/"))
         let timestamp = CreationTimestamp(time: 1000, sequenceNumber: 1)
         let statusItems = [
-            newBundleStatusItem(asserted: true),
-            newBundleStatusItem(asserted: false),
-            newTimeReportingBundleStatusItem(time: 12345),
-            newBundleStatusItem(asserted: false)
+            BundleStatusItem(asserted: true),
+            BundleStatusItem(asserted: false),
+            BundleStatusItem(timeReporting: 12345),
+            BundleStatusItem(asserted: false)
         ]
         
         // Create status report
         let statusReport = StatusReport(
             statusInformation: statusItems,
-            reportReason: NO_INFORMATION,
+            reportReason: .noInformation,
             sourceNode: sourceNode,
             timestamp: timestamp
         )
@@ -152,12 +152,12 @@ struct AdministrativeRecordTests {
         let bundle = Bundle(primary: primaryBlock)
         
         // Create a status report bundle
-        let reportBundle = newStatusReportBundle(
+        let reportBundle = StatusReport.newBundle(
             origBundle: bundle,
             source: sourceNode,
-            crcType: .crcNo,
-            status: RECEIVED_BUNDLE,
-            reason: NO_INFORMATION
+            crcType: CrcValue.crcNo,
+            status: .receivedBundle,
+            reason: .noInformation
         )
         
         // Test bundle properties
@@ -193,23 +193,22 @@ struct AdministrativeRecordTests {
         )
         
         // Create status report
-        let report = newStatusReport(
+        let report = StatusReport(
             bundle: bundle,
-            statusItem: RECEIVED_BUNDLE,
-            reason: NO_INFORMATION
+            statusItem: StatusInformationPos.receivedBundle,
+            reason: StatusReportReason.noInformation
         )
         
-        // Test status report properties
+        // Test properties
         #expect(report.statusInformation.count == 4)
-        #expect(report.statusInformation[0].asserted)
-        #expect(report.statusInformation[0].statusRequested)
-        #expect(!report.statusInformation[1].asserted)
-        #expect(!report.statusInformation[2].asserted)
-        #expect(!report.statusInformation[3].asserted)
-        #expect(report.reportReason == NO_INFORMATION)
+        #expect(report.statusInformation[Int(StatusInformationPos.receivedBundle.rawValue)].asserted)
+        #expect(report.statusInformation[Int(StatusInformationPos.receivedBundle.rawValue)].statusRequested)
+        #expect(!report.statusInformation[Int(StatusInformationPos.forwardedBundle.rawValue)].asserted)
+        #expect(!report.statusInformation[Int(StatusInformationPos.deliveredBundle.rawValue)].asserted)
+        #expect(!report.statusInformation[Int(StatusInformationPos.deletedBundle.rawValue)].asserted)
+        #expect(report.reportReason == .noInformation)
         #expect(report.sourceNode == bundle.primary.source)
-        #expect(report.timestamp.getDtnTime() == bundle.primary.creationTimestamp.getDtnTime())
-        #expect(report.timestamp.getSequenceNumber() == bundle.primary.creationTimestamp.getSequenceNumber())
+        #expect(report.timestamp == bundle.primary.creationTimestamp)
     }
     
     @Test("New Status Report Bundle")
@@ -233,12 +232,12 @@ struct AdministrativeRecordTests {
         
         // Create status report bundle
         let sourceNode = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//reporting-node/"))
-        let reportBundle = newStatusReportBundle(
+        let reportBundle = StatusReport.newBundle(
             origBundle: bundle,
             source: sourceNode,
-            crcType: .crcNo,
-            status: RECEIVED_BUNDLE,
-            reason: NO_INFORMATION
+            crcType: CrcValue.crcNo,
+            status: .receivedBundle,
+            reason: .noInformation
         )
         
         // Test bundle properties
