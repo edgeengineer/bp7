@@ -65,7 +65,9 @@ struct CanonicalTests {
     func testPayloadBlock() {
         do {
             let payload: [UInt8] = [1, 2, 3, 4, 5]
-            let block = try newPayloadBlock(blockControlFlags: [], data: payload)
+            
+            // Create a payload block
+            let block = try CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: payload)
             
             #expect(block.blockType == PAYLOAD_BLOCK)
             #expect(block.blockNumber == PAYLOAD_BLOCK_NUMBER)
@@ -93,7 +95,9 @@ struct CanonicalTests {
     func testHopCountBlock() {
         do {
             let limit: UInt8 = 10
-            var block = try newHopCountBlock(blockNumber: 2, blockControlFlags: [], limit: limit)
+            
+            // Create a hop count block
+            var block = try CanonicalBlock.newHopCountBlock(blockNumber: 2, blockControlFlags: [], limit: limit)
             
             #expect(block.blockType == HOP_COUNT_BLOCK)
             #expect(block.blockNumber == 2)
@@ -131,7 +135,9 @@ struct CanonicalTests {
     func testBundleAgeBlock() {
         do {
             let age: UInt64 = 1000
-            var block = try newBundleAgeBlock(blockNumber: 3, blockControlFlags: [], timeInMillis: age)
+            
+            // Create a bundle age block
+            var block = try CanonicalBlock.newBundleAgeBlock(blockNumber: 3, blockControlFlags: [], timeInMillis: age)
             
             #expect(block.blockType == BUNDLE_AGE_BLOCK)
             #expect(block.blockNumber == 3)
@@ -161,7 +167,9 @@ struct CanonicalTests {
     func testPreviousNodeBlock() {
         do {
             let dtnNode = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//node1/"))
-            var block = try newPreviousNodeBlock(blockNumber: 4, blockControlFlags: [], previousNode: dtnNode)
+            
+            // Create a previous node block
+            var block = try CanonicalBlock.newPreviousNodeBlock(blockNumber: 4, blockControlFlags: [], previousNode: dtnNode)
             
             #expect(block.blockType == PREVIOUS_NODE_BLOCK)
             #expect(block.blockNumber == 4)
@@ -191,7 +199,8 @@ struct CanonicalTests {
     func testBlockValidation() {
         // Test valid payload block
         do {
-            let block = try newPayloadBlock(blockControlFlags: [], data: [1, 2, 3])
+            // Create a payload block
+            let block = try CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: [1, 2, 3])
             
             do {
                 try block.validate()
@@ -205,7 +214,7 @@ struct CanonicalTests {
         
         // Test invalid block type
         do {
-            var block = try newPayloadBlock(blockControlFlags: [], data: [1, 2, 3])
+            var block = try CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: [1, 2, 3])
             // Change block type but keep payload data
             block = CanonicalBlock(
                 blockType: HOP_COUNT_BLOCK,
@@ -254,7 +263,9 @@ struct CanonicalTests {
     func testCborSerialization() {
         do {
             let payload: [UInt8] = [1, 2, 3, 4, 5]
-            let block = try newPayloadBlock(blockControlFlags: [], data: payload)
+            
+            // Create a payload block
+            let block = try CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: payload)
             
             let cbor = try block.toCbor()
             #expect(!cbor.isEmpty)
@@ -304,7 +315,9 @@ struct CanonicalTests {
         do {
             // Create a block to serialize
             let payload: [UInt8] = [1, 2, 3, 4, 5]
-            let originalBlock = try newPayloadBlock(blockControlFlags: [.blockReplicate], data: payload)
+            
+            // Test payload block
+            let originalBlock = try CanonicalBlock.newPayloadBlock(blockControlFlags: [.blockReplicate], data: payload)
             
             // Serialize to CBOR
             let cbor = try originalBlock.toCbor()
@@ -331,7 +344,9 @@ struct CanonicalTests {
         // Test hop count block
         do {
             let limit: UInt8 = 10
-            let originalBlock = try newHopCountBlock(blockNumber: 2, blockControlFlags: [.blockReplicate], limit: limit)
+            
+            // Test hop count block
+            let originalBlock = try CanonicalBlock.newHopCountBlock(blockNumber: 2, blockControlFlags: [.blockReplicate], limit: limit)
             
             // Serialize to CBOR
             let cbor = try originalBlock.toCbor()
@@ -358,7 +373,9 @@ struct CanonicalTests {
         // Test bundle age block
         do {
             let age: UInt64 = 1000
-            let originalBlock = try newBundleAgeBlock(blockNumber: 3, blockControlFlags: [.blockReplicate], timeInMillis: age)
+            
+            // Test bundle age block
+            let originalBlock = try CanonicalBlock.newBundleAgeBlock(blockNumber: 3, blockControlFlags: [.blockReplicate], timeInMillis: age)
             
             // Serialize to CBOR
             let cbor = try originalBlock.toCbor()
@@ -384,7 +401,9 @@ struct CanonicalTests {
         // Test previous node block
         do {
             let dtnNode = try EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//node1/"))
-            let originalBlock = try newPreviousNodeBlock(blockNumber: 4, blockControlFlags: [.blockReplicate], previousNode: dtnNode)
+            
+            // Test previous node block
+            let originalBlock = try CanonicalBlock.newPreviousNodeBlock(blockNumber: 4, blockControlFlags: [.blockReplicate], previousNode: dtnNode)
             
             // Serialize to CBOR
             let cbor = try originalBlock.toCbor()

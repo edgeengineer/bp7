@@ -1,13 +1,17 @@
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
+import Crypto
 import CBOR
-import CryptoKit
 
 /// Parameter for SHA variant
 public struct ShaVariantParameter: Codable, Sendable {
     public var id: UInt8
-    public var variant: ShaVariantType
+    public var variant: Security.Crypto.ShaVariant
     
-    public init(id: UInt8, variant: ShaVariantType) {
+    public init(id: UInt8, variant: Security.Crypto.ShaVariant) {
         self.id = id
         self.variant = variant
     }
@@ -27,37 +31,36 @@ public struct WrappedKeyParameter: Codable, Sendable {
 /// Parameter for integrity scope flags
 public struct IntegrityScopeFlagsParameter: Codable, Sendable {
     public var id: UInt8
-    public var flags: IntegrityScopeFlagsType
+    public var flags: IntegrityScopeFlags
     
-    public init(id: UInt8, flags: IntegrityScopeFlagsType) {
+    public init(id: UInt8, flags: IntegrityScopeFlags) {
         self.id = id
         self.flags = flags
     }
 }
 
-/// BIB Security Context Parameters as defined in RFC 9173
-public struct BibSecurityContextParameter: Sendable, Codable {
+/// BIB Security Context Parameter as defined in RFC 9173
+public struct BibSecurityContextParameter: Codable, Sendable {
     public var shaVariant: ShaVariantParameter?
     public var wrappedKey: WrappedKeyParameter?
     public var integrityScopeFlags: IntegrityScopeFlagsParameter?
     
-    /// Create a new BibSecurityContextParameter with specified values
     public init(
-        shaVariant: ShaVariantParameter? = nil,
-        wrappedKey: WrappedKeyParameter? = nil,
-        integrityScopeFlags: IntegrityScopeFlagsParameter? = nil
+        shaVariant: ShaVariantParameter?,
+        wrappedKey: WrappedKeyParameter?,
+        integrityScopeFlags: IntegrityScopeFlagsParameter?
     ) {
         self.shaVariant = shaVariant
         self.wrappedKey = wrappedKey
         self.integrityScopeFlags = integrityScopeFlags
     }
     
-    /// Create a default BibSecurityContextParameter
+    /// Create a default security context parameter
     public static func defaultParameter() -> BibSecurityContextParameter {
         return BibSecurityContextParameter(
-            shaVariant: ShaVariantParameter(id: 1, variant: HMAC_SHA_384),
+            shaVariant: ShaVariantParameter(id: 1, variant: Security.Crypto.ShaVariant.sha384),
             wrappedKey: nil,
-            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: 0x0007)
+            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: IntegrityScopeFlags.all)
         )
     }
 }
@@ -65,8 +68,8 @@ public struct BibSecurityContextParameter: Sendable, Codable {
 /// Integrity Block as defined in RFC 9172
 public struct IntegrityBlock: Sendable {
     public var securityTargets: [UInt64]
-    public var securityContextId: SecurityContextId
-    public var securityContextFlags: SecurityContextFlag
+    public var securityContextId: Security.Context.ID
+    public var securityContextFlags: Security.Context.Flag
     public var securitySource: EndpointID
     public var securityContextParameters: BibSecurityContextParameter?
     public var securityResults: [[(UInt64, [UInt8])]]
@@ -74,8 +77,8 @@ public struct IntegrityBlock: Sendable {
     /// Create a new IntegrityBlock with default values
     public init() {
         self.securityTargets = []
-        self.securityContextId = BIB_HMAC_SHA2_ID
-        self.securityContextFlags = SEC_CONTEXT_ABSENT
+        self.securityContextId = .bibHmacSha2
+        self.securityContextFlags = .absent
         self.securitySource = EndpointID.none()
         self.securityContextParameters = nil
         self.securityResults = []
@@ -84,8 +87,8 @@ public struct IntegrityBlock: Sendable {
     /// Create a new IntegrityBlock with specified values
     public init(
         securityTargets: [UInt64],
-        securityContextId: SecurityContextId,
-        securityContextFlags: SecurityContextFlag,
+        securityContextId: Security.Context.ID,
+        securityContextFlags: Security.Context.Flag,
         securitySource: EndpointID,
         securityContextParameters: BibSecurityContextParameter?,
         securityResults: [[(UInt64, [UInt8])]]
@@ -98,95 +101,96 @@ public struct IntegrityBlock: Sendable {
         self.securityResults = securityResults
     }
     
-    /// Compute HMAC-SHA256 for the given key and payload
-    private func hmacSha256Compute(keyBytes: [UInt8], payload: [UInt8]) -> [UInt8] {
+    /// Compute HMAC-SHA256 for the given data
+    private func hmacSha256Compute(keyBytes: [UInt8], payload: [UInt8]) throws -> [UInt8] {
         let key = SymmetricKey(data: keyBytes)
         let hmac = HMAC<SHA256>.authenticationCode(for: payload, using: key)
         return Array(hmac)
     }
     
-    /// Compute HMAC-SHA384 for the given key and payload
-    private func hmacSha384Compute(keyBytes: [UInt8], payload: [UInt8]) -> [UInt8] {
+    /// Compute HMAC-SHA384 for the given data
+    private func hmacSha384Compute(keyBytes: [UInt8], payload: [UInt8]) throws -> [UInt8] {
         let key = SymmetricKey(data: keyBytes)
         let hmac = HMAC<SHA384>.authenticationCode(for: payload, using: key)
         return Array(hmac)
     }
     
-    /// Compute HMAC-SHA512 for the given key and payload
-    private func hmacSha512Compute(keyBytes: [UInt8], payload: [UInt8]) -> [UInt8] {
+    /// Compute HMAC-SHA512 for the given data
+    private func hmacSha512Compute(keyBytes: [UInt8], payload: [UInt8]) throws -> [UInt8] {
         let key = SymmetricKey(data: keyBytes)
         let hmac = HMAC<SHA512>.authenticationCode(for: payload, using: key)
         return Array(hmac)
     }
     
-    /// Compute HMAC for the given key and IPPT list
-    public mutating func computeHmac(keyBytes: [UInt8], ipptList: [(UInt64, [UInt8])]) throws {
-        // Reset security results
-        self.securityResults = []
+    /// Generate security results for the integrity block
+    public mutating func generateResults(ippts: [(UInt64, [UInt8])], keyBytes: [UInt8]) throws {
+        var results: [[(UInt64, [UInt8])]] = []
         
-        // Ensure we have security context parameters
-        guard let parameters = self.securityContextParameters,
-              let shaVariant = parameters.shaVariant else {
-            throw SecurityError.invalidSecurityContextParameter
+        // Check if we have security context parameters
+        guard let parameters = self.securityContextParameters else {
+            throw SecurityError.missingParameters
         }
         
-        for ippt in ipptList {
-            if self.securityTargets.contains(ippt.0) {
-                let resultValue: [UInt8]
-                
+        // Check if we have SHA variant
+        guard let shaVariant = parameters.shaVariant else {
+            throw SecurityError.missingShaVariant
+        }
+        
+        // For each target, compute the HMAC
+        for ippt in ippts {
+            var targetResults: [(UInt64, [UInt8])] = []
+            var resultValue: [UInt8]
+            
+            do {
                 // Choose the appropriate HMAC algorithm based on the SHA variant
                 switch shaVariant.variant {
-                case HMAC_SHA_256:
-                    resultValue = hmacSha256Compute(keyBytes: keyBytes, payload: ippt.1)
-                case HMAC_SHA_384:
-                    resultValue = hmacSha384Compute(keyBytes: keyBytes, payload: ippt.1)
-                case HMAC_SHA_512:
-                    resultValue = hmacSha512Compute(keyBytes: keyBytes, payload: ippt.1)
-                default:
-                    throw SecurityError.invalidShaVariant
+                case .sha256:
+                    resultValue = try hmacSha256Compute(keyBytes: keyBytes, payload: ippt.1)
+                case .sha384:
+                    resultValue = try hmacSha384Compute(keyBytes: keyBytes, payload: ippt.1)
+                case .sha512:
+                    resultValue = try hmacSha512Compute(keyBytes: keyBytes, payload: ippt.1)
                 }
                 
-                // Integrity Security Context BIB-HMAC-SHA2 has only one result field
-                // that means for every target there will be only one vector entry
-                // with the result id set to 1 and the result value being the
-                // outcome of the security operation (-> the MAC)
-                self.securityResults.append([(ippt.0, resultValue)])
-            } else {
-                print("Security Target and IPPT mismatch. Make sure there is an IPPT for each target.")
+                targetResults.append((ippt.0, resultValue))
+            } catch {
+                throw SecurityError.hmacComputationFailed
             }
+            
+            results.append(targetResults)
         }
+        
+        self.securityResults = results
     }
     
-    /// Convert the IntegrityBlock to CBOR format
+    /// Convert the integrity block to CBOR format
     public func toCbor() throws -> [UInt8] {
-        var cborFormat = [UInt8]()
+        var cborFormat: [UInt8] = []
         
-        // Encode security targets as array
-        let targetsArray = securityTargets.map { CBOR.unsignedInt(UInt64($0)) }
-        let securityTargetsArray = CBOR.array(targetsArray)
+        // Encode security targets as an array
+        let securityTargetsArray = CBOR.array(self.securityTargets.map { CBOR.unsignedInt(UInt64($0)) })
         cborFormat += securityTargetsArray.encode()
         
         // Encode security context ID - use Int64 for negative values
-        let negativeId = Int64(-Int64(self.securityContextId) - 1)
+        let negativeId = Int64(-Int64(self.securityContextId.rawValue) - 1)
         let securityContextIdValue = CBOR.negativeInt(negativeId)
         cborFormat += securityContextIdValue.encode()
         
         // Encode security context flags
-        let securityContextFlagsValue = CBOR.unsignedInt(UInt64(self.securityContextFlags))
+        let securityContextFlagsValue = CBOR.unsignedInt(UInt64(self.securityContextFlags.rawValue))
         cborFormat += securityContextFlagsValue.encode()
         
         // Encode security source using its encode method
         let securitySourceCbor = try self.securitySource.encode()
         cborFormat += securitySourceCbor.encode()
         
-        // Encode security context parameters
+        // Encode security context parameters if present
         if let parameters = self.securityContextParameters {
-            // Convert parameters to a CBOR map
             var mapPairs: [CBORMapPair] = []
             
             if let shaVariant = parameters.shaVariant {
                 let key = CBOR.unsignedInt(UInt64(shaVariant.id))
-                let value = CBOR.unsignedInt(UInt64(shaVariant.variant))
+                let value = CBOR.unsignedInt(UInt64(shaVariant.variant.rawValue))
                 mapPairs.append(CBORMapPair(key: key, value: value))
             }
             
@@ -198,45 +202,77 @@ public struct IntegrityBlock: Sendable {
             
             if let scopeFlags = parameters.integrityScopeFlags {
                 let key = CBOR.unsignedInt(UInt64(scopeFlags.id))
-                let value = CBOR.unsignedInt(UInt64(scopeFlags.flags))
+                let value = CBOR.unsignedInt(UInt64(scopeFlags.flags.rawValue))
                 mapPairs.append(CBORMapPair(key: key, value: value))
             }
             
-            let paramsCbor = CBOR.map(mapPairs)
-            cborFormat += paramsCbor.encode()
+            let parametersMap = CBOR.map(mapPairs)
+            cborFormat += parametersMap.encode()
         } else {
+            // Encode null if no parameters
             cborFormat += CBOR.null.encode()
         }
         
-        // Format security results for CBOR encoding
-        var resultItems: [CBOR] = []
-        
-        for result in self.securityResults {
-            var resultEntries: [CBOR] = []
+        // Encode security results if present
+        if !self.securityResults.isEmpty {
+            var resultsArray: [CBOR] = []
             
-            for (target, value) in result {
-                let entry = CBOR.array([
-                    CBOR.unsignedInt(UInt64(target)),
-                    CBOR.byteString(value)
-                ])
-                resultEntries.append(entry)
+            for targetResults in self.securityResults {
+                var targetResultsArray: [CBOR] = []
+                
+                for (targetNum, resultValue) in targetResults {
+                    let resultPair = CBOR.array([CBOR.unsignedInt(UInt64(targetNum)), CBOR.byteString(resultValue)])
+                    targetResultsArray.append(resultPair)
+                }
+                
+                resultsArray.append(CBOR.array(targetResultsArray))
             }
             
-            resultItems.append(CBOR.array(resultEntries))
+            let securityResultsValue = CBOR.array(resultsArray)
+            cborFormat += securityResultsValue.encode()
+        } else {
+            // Encode null if no results
+            cborFormat += CBOR.null.encode()
         }
         
-        let resultsArray = CBOR.array(resultItems)
-        cborFormat += resultsArray.encode()
-        
         return cborFormat
+    }
+    
+    /// Validate the integrity block
+    public func validate() throws {
+        // Validate security context flags
+        if self.securityContextFlags == .present && self.securityContextParameters == nil {
+            throw IntegrityBlockError.invalidSecurityContextParameters
+        }
+        
+        // Additional validation can be added here
+    }
+    
+    /// Create a new integrity block as a canonical block
+    /// - Parameters:
+    ///   - blockNumber: The block number to assign
+    ///   - bcf: Block control flags
+    ///   - securityBlock: The security block data
+    /// - Returns: A canonical block containing the integrity block
+    public static func asCanonicalBlock(
+        blockNumber: UInt64,
+        bcf: BlockControlFlags,
+        securityBlock: [UInt8]
+    ) throws -> CanonicalBlock {
+        return try CanonicalBlockBuilder()
+            .blockType(Security.BlockType.integrity)
+            .blockNumber(blockNumber)
+            .blockControlFlags(bcf.rawValue)
+            .data(.unknown(securityBlock))
+            .build()
     }
 }
 
 /// Builder for IntegrityBlock
-public struct IntegrityBlockBuilder: Sendable {
+public struct IntegrityBlockBuilder {
     private var securityTargets: [UInt64]?
-    private var securityContextId: SecurityContextId
-    private var securityContextFlags: SecurityContextFlag
+    private var securityContextId: Security.Context.ID
+    private var securityContextFlags: Security.Context.Flag
     private var securitySource: EndpointID
     private var securityContextParameters: BibSecurityContextParameter?
     private var securityResults: [[(UInt64, [UInt8])]]
@@ -244,8 +280,8 @@ public struct IntegrityBlockBuilder: Sendable {
     /// Create a new IntegrityBlockBuilder with default values
     public init() {
         self.securityTargets = nil
-        self.securityContextId = BIB_HMAC_SHA2_ID
-        self.securityContextFlags = SEC_CONTEXT_ABSENT
+        self.securityContextId = .bibHmacSha2
+        self.securityContextFlags = .absent
         self.securitySource = EndpointID.none()
         self.securityContextParameters = nil
         self.securityResults = []
@@ -259,7 +295,7 @@ public struct IntegrityBlockBuilder: Sendable {
     }
     
     /// Set the security context flags
-    public func securityContextFlags(_ securityContextFlags: SecurityContextFlag) -> IntegrityBlockBuilder {
+    public func securityContextFlags(_ securityContextFlags: Security.Context.Flag) -> IntegrityBlockBuilder {
         var builder = self
         builder.securityContextFlags = securityContextFlags
         return builder
@@ -286,13 +322,14 @@ public struct IntegrityBlockBuilder: Sendable {
         return builder
     }
     
-    /// Build the IntegrityBlock
+    /// Build the integrity block
     public func build() throws -> IntegrityBlock {
+        // Validate required fields
         guard let securityTargets = self.securityTargets else {
             throw SecurityError.missingSecurityTargets
         }
         
-        if self.securityContextFlags == SEC_CONTEXT_PRESENT && self.securityContextParameters == nil {
+        if self.securityContextFlags == .present && self.securityContextParameters == nil {
             throw SecurityError.flagSetButNoParameter
         }
         
@@ -305,23 +342,4 @@ public struct IntegrityBlockBuilder: Sendable {
             securityResults: self.securityResults
         )
     }
-}
-
-/// Create a new integrity block
-/// - Parameters:
-///   - blockNumber: The block number
-///   - bcf: The block control flags
-///   - securityBlock: The security block data
-/// - Returns: A canonical block containing the integrity block
-public func newIntegrityBlock(
-    blockNumber: UInt64,
-    bcf: BlockControlFlags,
-    securityBlock: [UInt8]
-) throws -> CanonicalBlock {
-    return try CanonicalBlockBuilder()
-        .blockType(INTEGRITY_BLOCK)
-        .blockNumber(blockNumber)
-        .blockControlFlags(bcf.rawValue)
-        .data(.unknown(securityBlock))
-        .build()
 }

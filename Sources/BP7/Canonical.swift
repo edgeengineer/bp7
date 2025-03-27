@@ -505,42 +505,60 @@ extension CanonicalBlock: CrcBlock {
     }
 }
 
-/// Create a new hop count block
-public func newHopCountBlock(blockNumber: UInt64, blockControlFlags: BlockControlFlags, limit: UInt8) throws -> CanonicalBlock {
-    return try CanonicalBlockBuilder()
-        .blockType(HOP_COUNT_BLOCK)
-        .blockNumber(blockNumber)
-        .blockControlFlags(blockControlFlags.rawValue)
-        .data(.hopCount(limit, 0))
-        .build()
-}
-
-/// Create a new payload block
-public func newPayloadBlock(blockControlFlags: BlockControlFlags, data: [UInt8]) throws -> CanonicalBlock {
-    return try CanonicalBlockBuilder()
-        .blockType(PAYLOAD_BLOCK)
-        .blockNumber(PAYLOAD_BLOCK_NUMBER)
-        .blockControlFlags(blockControlFlags.rawValue)
-        .data(.data(data))
-        .build()
-}
-
-/// Create a new previous node block
-public func newPreviousNodeBlock(blockNumber: UInt64, blockControlFlags: BlockControlFlags, previousNode: EndpointID) throws -> CanonicalBlock {
-    return try CanonicalBlockBuilder()
-        .blockType(PREVIOUS_NODE_BLOCK)
-        .blockNumber(blockNumber)
-        .blockControlFlags(blockControlFlags.rawValue)
-        .data(.previousNode(previousNode))
-        .build()
-}
-
-/// Create a new bundle age block
-public func newBundleAgeBlock(blockNumber: UInt64, blockControlFlags: BlockControlFlags, timeInMillis: UInt64) throws -> CanonicalBlock {
-    return try CanonicalBlockBuilder()
-        .blockType(BUNDLE_AGE_BLOCK)
-        .blockNumber(blockNumber)
-        .blockControlFlags(blockControlFlags.rawValue)
-        .data(.bundleAge(timeInMillis))
-        .build()
+// MARK: - Block Factory Methods
+extension CanonicalBlock {
+    /// Create a new hop count block
+    public static func newHopCountBlock(
+        blockNumber: UInt64, 
+        blockControlFlags: BlockControlFlags, 
+        limit: UInt8
+    ) throws -> CanonicalBlock {
+        return try CanonicalBlockBuilder()
+            .blockType(HOP_COUNT_BLOCK)
+            .blockNumber(blockNumber)
+            .blockControlFlags(blockControlFlags.rawValue)
+            .data(.hopCount(limit, 0))
+            .build()
+    }
+    
+    /// Create a new payload block
+    public static func newPayloadBlock(
+        blockControlFlags: BlockControlFlags, 
+        data: [UInt8]
+    ) throws -> CanonicalBlock {
+        return try CanonicalBlockBuilder()
+            .blockType(PAYLOAD_BLOCK)
+            .blockNumber(PAYLOAD_BLOCK_NUMBER)
+            .blockControlFlags(blockControlFlags.rawValue)
+            .data(.data(data))
+            .build()
+    }
+    
+    /// Create a new previous node block
+    public static func newPreviousNodeBlock(
+        blockNumber: UInt64, 
+        blockControlFlags: BlockControlFlags, 
+        previousNode: EndpointID
+    ) throws -> CanonicalBlock {
+        return try CanonicalBlockBuilder()
+            .blockType(PREVIOUS_NODE_BLOCK)
+            .blockNumber(blockNumber)
+            .blockControlFlags(blockControlFlags.rawValue)
+            .data(.previousNode(previousNode))
+            .build()
+    }
+    
+    /// Create a new bundle age block
+    public static func newBundleAgeBlock(
+        blockNumber: UInt64, 
+        blockControlFlags: BlockControlFlags, 
+        timeInMillis: UInt64
+    ) throws -> CanonicalBlock {
+        return try CanonicalBlockBuilder()
+            .blockType(BUNDLE_AGE_BLOCK)
+            .blockNumber(blockNumber)
+            .blockControlFlags(blockControlFlags.rawValue)
+            .data(.bundleAge(timeInMillis))
+            .build()
+    }
 }

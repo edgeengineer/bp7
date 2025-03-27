@@ -182,14 +182,14 @@ struct AdministrativeRecordTests {
             crc: .crcNo,
             destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
             source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600
         )
         
         let bundle = Bundle(
             primary: primaryBlock,
-            canonicals: [try! newPayloadBlock(blockControlFlags: [], data: [1, 2, 3, 4, 5])]
+            canonicals: [try! CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: [1, 2, 3, 4, 5])]
         )
         
         // Create status report
@@ -221,14 +221,14 @@ struct AdministrativeRecordTests {
             crc: .crcNo,
             destination: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")),
             source: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")),
-            reportTo: EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
+            reportTo: try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")),
             creationTimestamp: CreationTimestamp(time: 1000, sequenceNumber: 1),
             lifetime: 3600
         )
         
         let bundle = Bundle(
             primary: primaryBlock,
-            canonicals: [try! newPayloadBlock(blockControlFlags: [], data: [1, 2, 3, 4, 5])]
+            canonicals: [try! CanonicalBlock.newPayloadBlock(blockControlFlags: [], data: [1, 2, 3, 4, 5])]
         )
         
         // Create status report bundle

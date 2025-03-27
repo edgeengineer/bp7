@@ -35,12 +35,12 @@ Add the following dependency to your `Package.swift` file:
 .package(url: "https://github.com/apache-edge/bp7.git", from: "0.0.1")
 ```
 
-Then include "bp7" as a dependency in your target:
+Then include "BP7" as a dependency in your target:
 
 ```swift
 .target(
     name: "YourTarget",
-    dependencies: ["bp7"]
+    dependencies: ["BP7"]
 ),
 ```
 
@@ -49,29 +49,49 @@ Then include "bp7" as a dependency in your target:
 ### Basic Example
 
 ```swift
-import bp7
+import BP7
 
-// Create a bundle node
-let node = BPNode(nodeId: "dtn://example.node")
+// Create endpoint identifiers
+let sourceEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source-node/"))
+let destinationEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination-node/"))
 
-// Create a bundle
-let bundle = Bundle(
-    source: "dtn://source.node",
-    destination: "dtn://destination.node",
-    payload: "Hello, DTN!".data(using: .utf8)!
+// Create a primary block
+let primaryBlock = try! PrimaryBlockBuilder()
+    .version(7)
+    .bundleControlFlags([])
+    .crc(.crc32)
+    .destination(destinationEID)
+    .source(sourceEID)
+    .reportTo(sourceEID) // Report back to source
+    .creationTimestamp(CreationTimestamp(time: DtnTime.currentTime(), sequenceNumber: 1))
+    .lifetime(3600) // 1 hour lifetime
+    .build()
+
+// Create a payload block with data
+let message = "Hello, DTN!"
+let payloadData: [UInt8] = Array(message.utf8)
+let payloadBlock = try! CanonicalBlock.newPayloadBlock(
+    blockControlFlags: [],
+    data: payloadData
 )
 
-// Send the bundle
-try node.send(bundle)
+// Create the bundle
+let bundle = Bundle(
+    primary: primaryBlock,
+    canonicals: [payloadBlock]
+)
 
-// Register a handler for incoming bundles
-node.registerBundleHandler { (bundle) in
-    print("Received bundle from: \(bundle.source)")
-    print("Payload: \(String(data: bundle.payload, encoding: .utf8) ?? "Unknown")")
+// Serialize the bundle to CBOR for transmission
+let serializedBundle = try! bundle.toCbor()
+
+// When receiving a bundle, deserialize it from CBOR
+let receivedBundle = try! Bundle.fromCbor(serializedBundle)
+
+// Access the payload
+if let payload = receivedBundle.payload(),
+   let receivedMessage = String(bytes: payload, encoding: .utf8) {
+    print("Received message: \(receivedMessage)")
 }
-
-// Start the bundle protocol agent
-node.start()
 ```
 
 ## Bundle Protocol Concepts
@@ -90,6 +110,64 @@ A bundle consists of:
 - **Primary Block**: Contains routing information (source, destination, etc.)
 - **Payload Block**: Contains the application data
 - **Extension Blocks**: Optional blocks for additional functionality (Previous Node, Bundle Age, Hop Count, etc.)
+
+### Creating Bundles
+
+BP7 provides a builder pattern for creating bundles. Here's an example of how to create a bundle:
+
+```swift
+import BP7
+
+// Create endpoint identifiers
+let sourceEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source-node/"))
+let destinationEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination-node/"))
+let reportToEID = try! EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to-node/"))
+
+// Create a primary block using PrimaryBlockBuilder
+let primaryBlock = try! PrimaryBlockBuilder()
+    .version(7)
+    .bundleControlFlags([.bundleRequestStatusTime])
+    .crc(.crc32)
+    .destination(destinationEID)
+    .source(sourceEID)
+    .reportTo(reportToEID)
+    .creationTimestamp(CreationTimestamp(time: DtnTime.currentTime(), sequenceNumber: 1))
+    .lifetime(3600) // 1 hour lifetime
+    .build()
+
+// Create a payload block with data
+let payloadData: [UInt8] = Array("Hello, Bundle Protocol 7!".utf8)
+let payloadBlock = try! CanonicalBlock.newPayloadBlock(
+    blockControlFlags: [],
+    data: payloadData
+)
+
+// Create a hop count block (optional extension block)
+let hopCountBlock = try! CanonicalBlock.newHopCountBlock(
+    blockNumber: 2,
+    blockControlFlags: [],
+    limit: 10
+)
+
+// Create the bundle using BundleBuilder
+let bundle = try! BundleBuilder()
+    .primary(primaryBlock)
+    .addCanonical(payloadBlock)
+    .addCanonical(hopCountBlock)
+    .build()
+
+// Alternatively, you can create a bundle directly
+let simpleBundle = Bundle(
+    primary: primaryBlock,
+    canonicals: [payloadBlock, hopCountBlock]
+)
+
+// Access the payload
+if let payload = bundle.payload(), 
+   let message = String(bytes: payload, encoding: .utf8) {
+    print("Bundle payload: \(message)")
+}
+```
 
 ### Bundle Processing
 

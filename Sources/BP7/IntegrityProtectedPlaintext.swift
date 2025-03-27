@@ -1,4 +1,8 @@
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 import CBOR
 
 /// Structure to hold the Integrity Protected Plaintext. The content
@@ -15,21 +19,21 @@ import CBOR
 /// Bit 2 (0x0004): Include security header flag
 /// Bits 3-15: Unassigned.
 public struct IntegrityProtectedPlaintext: Sendable {
-    public var scopeFlags: IntegrityScopeFlagsType
+    public var scopeFlags: IntegrityScopeFlags
     public var primaryBlock: PrimaryBlock?
     public var securityHeader: SecurityBlockHeader?
     public var securityTargetContents: [UInt8]
     
     /// Create a new IntegrityProtectedPlaintext with default values
     public init() {
-        self.scopeFlags = 0x0007 // default value with all flags set
+        self.scopeFlags = IntegrityScopeFlags.all // default value with all flags set
         self.primaryBlock = nil
         self.securityHeader = nil
         self.securityTargetContents = []
     }
     
     /// Create a new IntegrityProtectedPlaintext with specified values
-    public init(scopeFlags: IntegrityScopeFlagsType, primaryBlock: PrimaryBlock? = nil, 
+    public init(scopeFlags: IntegrityScopeFlags, primaryBlock: PrimaryBlock? = nil, 
                 securityHeader: SecurityBlockHeader? = nil, securityTargetContents: [UInt8] = []) {
         self.scopeFlags = scopeFlags
         self.primaryBlock = primaryBlock
@@ -72,85 +76,63 @@ public struct IntegrityProtectedPlaintext: Sendable {
             }
         }
         
-        // Create canonical form of the security target contents
-        if case let .data(data) = payloadBlock.getData() {
-            securityTargetContents = data
+        // Encode the scope flags as CBOR
+        let scopeFlagsValue = CBOR.unsignedInt(UInt64(scopeFlags.rawValue))
+        var ipptData = scopeFlagsValue.encode()
+        
+        // Add optional data
+        ipptData += optionalIpptData
+        
+        // Add the payload data
+        if case let .data(payloadData) = payloadBlock.getData() {
+            ipptData += payloadData
+        } else if case let .unknown(unknownData) = payloadBlock.getData() {
+            ipptData += unknownData
         } else {
-            // For other types, use the raw data or serialize it
-            securityTargetContents = try serializeCanonicalData(payloadBlock.getData())
+            throw SecurityError.invalidPayloadData
         }
         
-        // Create the final IPPT data
-        var ippt = [UInt8]()
-        
-        // Encode the scope flags as a CBOR unsigned integer
-        let scopeFlagsValue = CBOR.unsignedInt(UInt64(scopeFlags))
-        let scopeFlagsCbor = scopeFlagsValue.encode()
-        ippt += scopeFlagsCbor
-        ippt += optionalIpptData
-        ippt += securityTargetContents
-        
-        return ippt
+        return ipptData
     }
     
-    /// Serialize canonical data to CBOR
-    private func serializeCanonicalData(_ data: CanonicalData) throws -> [UInt8] {
-        switch data {
-        case .data(let bytes):
-            return bytes
-        case .unknown(let bytes):
-            return bytes
-        default:
-            // For other types, create a simple representation
-            let stringValue = CBOR.textString(String(describing: data))
-            return stringValue.encode()
-        }
-    }
-    
-    /// Construct the payload header in canonical form
-    /// - Parameter payloadBlock: The canonical block whose header is being included
+    /// Construct the payload header for the IPPT
+    /// - Parameter payloadBlock: The canonical block whose header is being protected
     /// - Returns: The byte buffer containing the payload header
     private func constructPayloadHeader(payloadBlock: CanonicalBlock) throws -> [UInt8]? {
         var header = [UInt8]()
         
-        // Encode block type as CBOR unsigned integer
+        // Encode block type
         let blockTypeValue = CBOR.unsignedInt(UInt64(payloadBlock.blockType))
-        let blockTypeCbor = blockTypeValue.encode()
-        header += blockTypeCbor
+        header += blockTypeValue.encode()
         
-        // Encode block number as CBOR unsigned integer
-        let blockNumberValue = CBOR.unsignedInt(payloadBlock.blockNumber)
-        let blockNumberCbor = blockNumberValue.encode()
-        header += blockNumberCbor
+        // Encode block number
+        let blockNumberValue = CBOR.unsignedInt(UInt64(payloadBlock.blockNumber))
+        header += blockNumberValue.encode()
         
-        // Encode block control flags as CBOR unsigned integer
+        // Encode block control flags
         let blockControlFlagsValue = CBOR.unsignedInt(UInt64(payloadBlock.blockControlFlags))
-        let blockControlFlagsCbor = blockControlFlagsValue.encode()
-        header += blockControlFlagsCbor
+        header += blockControlFlagsValue.encode()
         
         return header
     }
     
-    /// Construct the security header in canonical form
+    /// Construct the security header for the IPPT
     /// - Parameter securityHeader: The security block header tuple
     /// - Returns: The byte buffer containing the security header
     private func constructSecurityHeader(securityHeader: SecurityBlockHeader) throws -> [UInt8]? {
         var header = [UInt8]()
         
-        // Encode block type as CBOR unsigned integer
+        // Encode block type
         let blockTypeValue = CBOR.unsignedInt(UInt64(securityHeader.0))
-        let blockTypeCbor = blockTypeValue.encode()
-        header += blockTypeCbor
+        header += blockTypeValue.encode()
         
-        // Encode block number as CBOR unsigned integer
-        let blockNumberValue = CBOR.unsignedInt(securityHeader.1)
-        let blockNumberCbor = blockNumberValue.encode()
-        header += blockNumberCbor
+        // Encode block number
+        let blockNumberValue = CBOR.unsignedInt(UInt64(securityHeader.1))
+        header += blockNumberValue.encode()
         
-        // Encode block control flags as CBOR unsigned integer
+        // Encode block control flags
         let blockControlFlagsValue = CBOR.unsignedInt(UInt64(securityHeader.2))
-        let blockControlFlagsCbor = blockControlFlagsValue.encode()
-        header += blockControlFlagsCbor
+        header += blockControlFlagsValue.encode()
         
         return header
     }
@@ -158,14 +140,14 @@ public struct IntegrityProtectedPlaintext: Sendable {
 
 /// Builder for IntegrityProtectedPlaintext
 public struct IpptBuilder: Sendable {
-    private var scopeFlags: IntegrityScopeFlagsType
+    private var scopeFlags: IntegrityScopeFlags
     private var primaryBlock: PrimaryBlock?
     private var securityHeader: SecurityBlockHeader?
     private var securityTargetContents: [UInt8]
     
     /// Create a new IpptBuilder with default values
     public init() {
-        self.scopeFlags = 0x0007 // default value with all flags set
+        self.scopeFlags = IntegrityScopeFlags.all
         self.primaryBlock = nil
         self.securityHeader = nil
         self.securityTargetContents = []
@@ -174,7 +156,7 @@ public struct IpptBuilder: Sendable {
     /// Set the scope flags
     public func scopeFlags(_ scopeFlags: IntegrityScopeFlagsType) -> IpptBuilder {
         var builder = self
-        builder.scopeFlags = scopeFlags
+        builder.scopeFlags = IntegrityScopeFlags(rawValue: scopeFlags)
         return builder
     }
     

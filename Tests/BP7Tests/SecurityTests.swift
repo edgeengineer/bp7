@@ -1,10 +1,10 @@
-import Testing
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
 import CBOR
+import Testing
 @testable import BP7
 
 @Suite("Security Tests")
@@ -29,7 +29,7 @@ struct SecurityTests {
         #expect(allFlags.contains(securityFlag))
         
         // Test flag validation
-        let flagsValue: IntegrityScopeFlagsType = 0x0003 // Primary + Payload
+        let flagsValue: IntegrityScopeFlags = [.integrityPrimaryHeader, .integrityPayloadHeader]
         #expect(flagsValue.contains(.integrityPrimaryHeader))
         #expect(flagsValue.contains(.integrityPayloadHeader))
         #expect(!flagsValue.contains(.integritySecurityHeader))
@@ -39,20 +39,20 @@ struct SecurityTests {
     func testBibSecurityContextParameter() {
         // Create a default parameter
         let defaultParam = BibSecurityContextParameter.defaultParameter()
-        #expect(defaultParam.shaVariant?.variant == HMAC_SHA_384)
+        #expect(defaultParam.shaVariant?.variant == Security.Crypto.ShaVariant.sha384)
         #expect(defaultParam.wrappedKey == nil)
-        #expect(defaultParam.integrityScopeFlags?.flags == 0x0007)
+        #expect(defaultParam.integrityScopeFlags?.flags == IntegrityScopeFlags.all)
         
         // Create a custom parameter
         let customParam = BibSecurityContextParameter(
-            shaVariant: ShaVariantParameter(id: 1, variant: HMAC_SHA_256),
+            shaVariant: ShaVariantParameter(id: 1, variant: Security.Crypto.ShaVariant.sha256),
             wrappedKey: WrappedKeyParameter(id: 2, key: [0x01, 0x02, 0x03, 0x04]),
-            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: 0x0003)
+            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: IntegrityScopeFlags([.integrityPrimaryHeader, .integrityPayloadHeader]))
         )
         
-        #expect(customParam.shaVariant?.variant == HMAC_SHA_256)
+        #expect(customParam.shaVariant?.variant == Security.Crypto.ShaVariant.sha256)
         #expect(customParam.wrappedKey?.key == [0x01, 0x02, 0x03, 0x04])
-        #expect(customParam.integrityScopeFlags?.flags == 0x0003)
+        #expect(customParam.integrityScopeFlags?.flags == IntegrityScopeFlags([.integrityPrimaryHeader, .integrityPayloadHeader]))
         
         // Test CBOR encoding and decoding
         do {
@@ -89,7 +89,7 @@ struct SecurityTests {
             .build()
         
         // Create a security header
-        let securityHeader: SecurityBlockHeader = (INTEGRITY_BLOCK, 2, 0)
+        let securityHeader: SecurityBlockHeader = (Security.BlockType.integrity, 2, 0)
         
         // Create an IPPT using the builder
         let ippt = IpptBuilder()
@@ -125,27 +125,27 @@ struct SecurityTests {
         
         // Create security context parameters
         let securityContextParameters = BibSecurityContextParameter(
-            shaVariant: ShaVariantParameter(id: 1, variant: HMAC_SHA_384),
+            shaVariant: ShaVariantParameter(id: 1, variant: Security.Crypto.ShaVariant.sha384),
             wrappedKey: nil,
-            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: 0x0007)
+            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: IntegrityScopeFlags.all)
         )
         
         // Create an integrity block using the builder
         do {
             let integrityBlock = try IntegrityBlockBuilder()
                 .securityTargets(securityTargets)
-                .securityContextFlags(SEC_CONTEXT_PRESENT)
+                .securityContextFlags(Security.Context.Flag.present)
                 .securitySource(securitySource)
                 .securityContextParameters(securityContextParameters)
                 .build()
             
             // Verify the integrity block properties
             #expect(integrityBlock.securityTargets == securityTargets)
-            #expect(integrityBlock.securityContextId == BIB_HMAC_SHA2_ID)
-            #expect(integrityBlock.securityContextFlags == SEC_CONTEXT_PRESENT)
+            #expect(integrityBlock.securityContextId == Security.Context.ID.bibHmacSha2)
+            #expect(integrityBlock.securityContextFlags == Security.Context.Flag.present)
             #expect(integrityBlock.securitySource == securitySource)
-            #expect(integrityBlock.securityContextParameters?.shaVariant?.variant == HMAC_SHA_384)
-            #expect(integrityBlock.securityContextParameters?.integrityScopeFlags?.flags == 0x0007)
+            #expect(integrityBlock.securityContextParameters?.shaVariant?.variant == Security.Crypto.ShaVariant.sha384)
+            #expect(integrityBlock.securityContextParameters?.integrityScopeFlags?.flags == IntegrityScopeFlags.all)
             
             // Test CBOR encoding
             let cborData = try integrityBlock.toCbor()
@@ -166,27 +166,27 @@ struct SecurityTests {
         
         // Create security context parameters with SHA-256
         let securityContextParameters = BibSecurityContextParameter(
-            shaVariant: ShaVariantParameter(id: 1, variant: HMAC_SHA_256),
+            shaVariant: ShaVariantParameter(id: 1, variant: Security.Crypto.ShaVariant.sha256),
             wrappedKey: nil,
-            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: 0x0007)
+            integrityScopeFlags: IntegrityScopeFlagsParameter(id: 3, flags: IntegrityScopeFlags.all)
         )
         
         // Create an integrity block using the builder
         do {
             let integrityBlock = try IntegrityBlockBuilder()
                 .securityTargets(securityTargets)
-                .securityContextFlags(SEC_CONTEXT_PRESENT)
+                .securityContextFlags(Security.Context.Flag.present)
                 .securitySource(securitySource)
                 .securityContextParameters(securityContextParameters)
                 .build()
             
             // Verify the integrity block properties
             #expect(integrityBlock.securityTargets == securityTargets)
-            #expect(integrityBlock.securityContextId == BIB_HMAC_SHA2_ID)
-            #expect(integrityBlock.securityContextFlags == SEC_CONTEXT_PRESENT)
+            #expect(integrityBlock.securityContextId == Security.Context.ID.bibHmacSha2)
+            #expect(integrityBlock.securityContextFlags == Security.Context.Flag.present)
             #expect(integrityBlock.securitySource == securitySource)
-            #expect(integrityBlock.securityContextParameters?.shaVariant?.variant == HMAC_SHA_256)
-            #expect(integrityBlock.securityContextParameters?.integrityScopeFlags?.flags == 0x0007)
+            #expect(integrityBlock.securityContextParameters?.shaVariant?.variant == Security.Crypto.ShaVariant.sha256)
+            #expect(integrityBlock.securityContextParameters?.integrityScopeFlags?.flags == IntegrityScopeFlags.all)
             
             // Test CBOR encoding
             let cborData = try integrityBlock.toCbor()
@@ -207,14 +207,14 @@ struct SecurityTests {
         
         // Create a new integrity block
         do {
-            let block = try newIntegrityBlock(
+            let block = try IntegrityBlock.asCanonicalBlock(
                 blockNumber: 2,
                 bcf: bcf,
                 securityBlock: securityBlockData
             )
             
             // Verify the block properties
-            #expect(block.blockType == INTEGRITY_BLOCK)
+            #expect(block.blockType == Security.BlockType.integrity)
             #expect(block.blockNumber == 2)
             #expect(block.blockControlFlags == bcf.rawValue)
             
