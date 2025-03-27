@@ -1,8 +1,11 @@
 # Bundle Protocol Version 7 (BP7)
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS-brightgreen.svg)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS-brightgreen.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![macOS](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![Linux](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![Windows](https://github.com/apache-edge/bp7/actions/workflows/swift.yml/badge.svg)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
 
 A cross-platform Swift implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
 
