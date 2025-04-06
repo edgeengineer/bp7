@@ -1,9 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 import CBOR
 
 /// Namespace for endpoint-related constants and functionality

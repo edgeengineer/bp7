@@ -1,9 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 /// Errors that can occur in the Bundle Protocol Version 7 implementation.
 public enum BP7Error: Error, Equatable, CustomStringConvertible {
     /// Errors related to endpoint identifiers.

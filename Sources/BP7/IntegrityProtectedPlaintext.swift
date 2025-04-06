@@ -1,8 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 import CBOR
 
 /// Structure to hold the Integrity Protected Plaintext. The content

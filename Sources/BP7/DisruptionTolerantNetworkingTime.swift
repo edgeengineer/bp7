@@ -1,21 +1,91 @@
 // Import the appropriate Foundation modules based on platform availability
+
+// Import system libraries based on platform
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Darwin)
+import Darwin
+#elseif canImport(WinSDK)
+import WinSDK
+#endif
+
 #if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
+@_implementationOnly import FoundationEssentials
+#elseif canImport(Foundation)
 import Foundation
 #endif
 
-// Import Dispatch conditionally
-#if canImport(Dispatch)
-import Dispatch
+#if canImport(Synchronization)
+import Synchronization
 #endif
 
-// Import system libraries based on platform
-#if os(Linux)
-import Glibc
-#elseif os(Windows)
-import WinSDK
-#endif
+fileprivate final class OSMutex<Value: Sendable>: @unchecked Sendable {
+    private var value: Value
+
+    func withLock<Result>(_ body: (inout Value) throws -> Result) rethrows -> Result {
+        lock()
+        defer { unlock() }
+        return try body(&value)
+    }
+
+    #if canImport(Darwin)
+    var unfairLock = os_unfair_lock()
+
+    init(_ value: Value) {
+        self.value = value
+    }
+
+    func lock() {
+        os_unfair_lock_lock(&unfairLock)
+    }
+
+    func unlock() {
+        os_unfair_lock_unlock(&unfairLock)
+    }
+    #elseif canImport(Glibc) || canImport(Musl)
+    // Thread-safe implementation for Linux using a simple mutex
+    private var mutex = pthread_mutex_t()
+    
+    init(_ value: Value) {
+        pthread_mutex_init(&mutex, nil)
+        self.value = value
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&mutex)
+    }
+    
+    func lock() {
+        pthread_mutex_lock(&mutex)
+    }
+
+    func unlock() {
+        pthread_mutex_unlock(&mutex)
+    }
+    #elseif os(Windows)
+    // Thread-safe implementation for Windows using SRWLock
+    private var lock = SRWLOCK()
+    
+    init(_ value: Value) {
+        InitializeSRWLock(&lock)
+        self.value = value
+    }
+
+    deinit {
+        DeleteSRWLock(&lock)
+    }
+
+    func lock() {
+        AcquireSRWLockExclusive(&lock)
+    }
+
+    func unlock() {
+        ReleaseSRWLockExclusive(&lock)
+    }
+    #endif
+}
 
 /// Time since the year 2k in milliseconds
 public typealias DisruptionTolerantNetworkingTime = UInt64
@@ -39,6 +109,7 @@ public extension DisruptionTolerantNetworkingTime {
         return (self + DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K) / 1000
     }
     
+    #if canImport(FoundationEssentials) || canImport(Foundation)
     /// Convert DTN time to a human-readable RFC3339 compliant time string
     func toRFC3339String() -> String {
         let timeInterval = TimeInterval((self + DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K) / 1000)
@@ -88,17 +159,28 @@ public extension DisruptionTolerantNetworkingTime {
         return Date(timeIntervalSince1970: timeInterval)
     }
     
-    /// Get current time as DisruptionTolerantNetworkingTime timestamp
-    static func now() -> DisruptionTolerantNetworkingTime {
-        let currentTimeMillis = UInt64(Date().timeIntervalSince1970 * 1000)
-        return currentTimeMillis - DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K
-    }
-    
     /// Create a DisruptionTolerantNetworkingTime from a Swift Date object
     static func from(date: Date) -> DisruptionTolerantNetworkingTime {
         let millisSince1970 = UInt64(date.timeIntervalSince1970 * 1000)
         return millisSince1970 - DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K
     }
+    
+    /// Get current time as DisruptionTolerantNetworkingTime timestamp
+    static func now() -> DisruptionTolerantNetworkingTime {
+        var tv = timeval()
+        gettimeofday(&tv, nil)
+        let currentTimeMillis = UInt64(tv.tv_sec) * 1000 + UInt64(tv.tv_usec) / 1000
+        return currentTimeMillis - DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K
+    }
+    #else
+    /// Get current time as DisruptionTolerantNetworkingTime timestamp
+    static func now() -> DisruptionTolerantNetworkingTime {
+        var currentTime = time_t()
+        time(&currentTime)
+        let currentTimeMillis = UInt64(currentTime) * 1000
+        return currentTimeMillis - DisruptionTolerantNetworkingTimeConstants.MS1970_TO2K
+    }
+    #endif
 }
 
 /// Timestamp when a bundle was created, consisting of the DisruptionTolerantNetworkingTime and a sequence number
@@ -136,6 +218,7 @@ public struct CreationTimestamp: Equatable, Hashable, Sendable, CustomStringConv
         return "\(time.toRFC3339String()) \(sequenceNumber)"
     }
     
+    #if canImport(FoundationEssentials) || canImport(Foundation)
     /// Convert the timestamp to a Date object (using only the time component)
     public func toDate() -> Date {
         return time.toDate()
@@ -146,107 +229,36 @@ public struct CreationTimestamp: Equatable, Hashable, Sendable, CustomStringConv
         let dtnTime = DisruptionTolerantNetworkingTime.from(date: date)
         return CreationTimestamp(time: dtnTime, sequenceNumber: sequenceNumber)
     }
+    #endif
     
     // Thread-safe timestamp generators
-    private static let syncSequenceGenerator = SyncSequenceGenerator()
-    private static let asyncSequenceGenerator = AsyncSequenceGenerator()
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 9.0, *)
+    private static let syncSequenceGenerator = Mutex(SyncSequenceGenerator())
+
+    private static let _syncSequenceGenerator = OSMutex(SyncSequenceGenerator())
     
     /// Create a new timestamp with the current time and automatic sequence counting
     public static func now() -> CreationTimestamp {
         let currentTime = DisruptionTolerantNetworkingTime.now()
-        let sequenceNumber = syncSequenceGenerator.nextSequence(for: currentTime)
-        return CreationTimestamp(time: currentTime, sequenceNumber: sequenceNumber)
-    }
-    
-    /// Asynchronous version that uses the actor for better concurrency
-    public static func nowAsync() async -> CreationTimestamp {
-        let currentTime = DisruptionTolerantNetworkingTime.now()
-        let sequenceNumber = await asyncSequenceGenerator.nextSequence(for: currentTime)
+        let sequenceNumber: UInt64
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 9.0, *) {
+            sequenceNumber = syncSequenceGenerator.withLock { $0.nextSequence(for: currentTime) }
+        } else {
+            sequenceNumber = _syncSequenceGenerator.withLock { $0.nextSequence(for: currentTime) }
+        }
         return CreationTimestamp(time: currentTime, sequenceNumber: sequenceNumber)
     }
 }
 
 // MARK: - Thread-safe Sequence Generator (Synchronous version)
 /// A class to generate sequence numbers in a thread-safe manner
-final class SyncSequenceGenerator: @unchecked Sendable {
-    #if canImport(Dispatch) && !os(Linux) && !os(Windows)
-    // Using a dispatch queue for synchronization on Apple platforms
-    private let queue = DispatchQueue(label: "com.bp7.dtntime.sequence")
+fileprivate struct SyncSequenceGenerator: Sendable {
     private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
     private var lastSequence: UInt64 = 0
-    
-    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
-        return queue.sync {
-            if timestamp != lastTimestamp {
-                lastTimestamp = timestamp
-                lastSequence = 0
-            } else {
-                lastSequence += 1
-            }
-            
-            return lastSequence
-        }
-    }
-    #elseif os(Linux)
-    // Thread-safe implementation for Linux using a simple mutex
-    private var mutex = pthread_mutex_t()
-    private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
-    private var lastSequence: UInt64 = 0
-    
-    init() {
-        pthread_mutex_init(&mutex, nil)
-    }
-    
-    deinit {
-        pthread_mutex_destroy(&mutex)
-    }
-    
-    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
-        pthread_mutex_lock(&mutex)
-        defer { pthread_mutex_unlock(&mutex) }
-        
-        if timestamp != lastTimestamp {
-            lastTimestamp = timestamp
-            lastSequence = 0
-        } else {
-            lastSequence += 1
-        }
-        
-        return lastSequence
-    }
-    #elseif os(Windows)
-    // Thread-safe implementation for Windows using SRWLOCK
-    private var lock = SRWLOCK()
-    private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
-    private var lastSequence: UInt64 = 0
-    
-    init() {
-        InitializeSRWLock(&lock)
-    }
-    
-    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
-        AcquireSRWLockExclusive(&lock)
-        defer { ReleaseSRWLockExclusive(&lock) }
-        
-        if timestamp != lastTimestamp {
-            lastTimestamp = timestamp
-            lastSequence = 0
-        } else {
-            lastSequence += 1
-        }
-        
-        return lastSequence
-    }
-    #endif
-}
 
-// MARK: - Thread-safe Sequence Generator (Asynchronous version)
-/// An actor to generate sequence numbers in a thread-safe manner
-actor AsyncSequenceGenerator {
-    private var lastTimestamp: DisruptionTolerantNetworkingTime = 0
-    private var lastSequence: UInt64 = 0
+    init() {}
     
-    func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
+    mutating func nextSequence(for timestamp: DisruptionTolerantNetworkingTime) -> UInt64 {
         if timestamp != lastTimestamp {
             lastTimestamp = timestamp
             lastSequence = 0

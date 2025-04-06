@@ -1,8 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 /// Cyclic Redundancy Check (CRC) type raw value
 public typealias CrcRawType = UInt8
 

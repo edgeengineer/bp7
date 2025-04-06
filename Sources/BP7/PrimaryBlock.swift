@@ -1,8 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 import CBOR
 
 /******************************
@@ -32,7 +27,7 @@ public struct PrimaryBlockBuilder {
     private var source: EndpointID?
     private var reportTo: EndpointID?
     private var creationTimestamp: CreationTimestamp?
-    private var lifetime: TimeInterval = 3600 // Default 1 hour lifetime
+    private var lifetime: Double = 3600 // Default 1 hour lifetime
     private var fragmentationOffset: UInt64 = 0
     private var totalDataLength: UInt64 = 0
     
@@ -89,7 +84,7 @@ public struct PrimaryBlockBuilder {
     }
     
     /// Set the lifetime in seconds
-    public func lifetime(_ lifetime: TimeInterval) -> PrimaryBlockBuilder {
+    public func lifetime(_ lifetime: Double) -> PrimaryBlockBuilder {
         var builder = self
         builder.lifetime = lifetime
         return builder
@@ -164,7 +159,7 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
     public let creationTimestamp: CreationTimestamp
     
     /// Lifetime in seconds
-    public let lifetime: TimeInterval
+    public let lifetime: Double
     
     /// Fragmentation offset (only used if bundle is a fragment)
     public let fragmentationOffset: UInt64
@@ -181,7 +176,7 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
         source: EndpointID,
         reportTo: EndpointID,
         creationTimestamp: CreationTimestamp,
-        lifetime: TimeInterval,
+        lifetime: Double,
         fragmentationOffset: UInt64 = 0,
         totalDataLength: UInt64 = 0
     ) {
@@ -202,7 +197,7 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
         destination: String,
         source: String,
         creationTimestamp: CreationTimestamp = CreationTimestamp(),
-        lifetime: TimeInterval = 3600 // Default 1 hour lifetime
+        lifetime: Double = 3600 // Default 1 hour lifetime
     ) {
         // Remove "dtn:" prefix if present
         let dstAddress = destination.replacingOccurrences(of: "dtn:", with: "")
@@ -423,7 +418,7 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
             source: source,
             reportTo: reportTo,
             creationTimestamp: creationTimestamp,
-            lifetime: TimeInterval(lifetimeValue),
+            lifetime: Double(lifetimeValue),
             fragmentationOffset: fragmentationOffset,
             totalDataLength: totalDataLength
         )
