@@ -12,7 +12,7 @@ import WinSDK
 #endif
 
 #if canImport(FoundationEssentials)
-@_implementationOnly import FoundationEssentials
+import FoundationEssentials
 #elseif canImport(Foundation)
 import Foundation
 #endif
