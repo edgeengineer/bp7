@@ -46,7 +46,7 @@ public struct Bundle: Equatable, Sendable {
             // Calculate and set the CRC value
             if crcType != .crcNo {
                 var mutableBlock = primaryCopy
-                let calculatedCrc = CyclicRedundancyCheck.calculateCrc(&mutableBlock)
+                let calculatedCrc = BP7CRC.calculateCrc(&mutableBlock)
                 primaryCopy.setCrc(calculatedCrc)
             }
         }
@@ -63,7 +63,7 @@ public struct Bundle: Equatable, Sendable {
                 
                 // Calculate and set the CRC value
                 if crcType != .crcNo {
-                    let calculatedCrc = CyclicRedundancyCheck.calculateCrc(&block)
+                    let calculatedCrc = BP7CRC.calculateCrc(&block)
                     block.setCrc(calculatedCrc)
                 }
                 
