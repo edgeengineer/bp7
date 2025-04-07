@@ -1,8 +1,3 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 import CBOR
 
 /// Represents a complete Bundle Protocol 7 bundle
