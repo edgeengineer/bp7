@@ -63,27 +63,23 @@ struct AdministrativeRecordTests {
         #expect(report.timestamp == timestamp)
         
         // Test CBOR encoding
+        let cbor = report.encode()
+        // Check that CBOR encoding was successful
+        #expect(Bool(true))
+        
+        // Test decoding
         do {
-            let cbor = try report.encode()
-            // Check that CBOR encoding was successful
-            #expect(Bool(true))
-            
-            // Test decoding
-            do {
-                let decoded = try StatusReport.decode(from: cbor)
-                #expect(decoded.statusInformation.count == 4)
-                #expect(decoded.statusInformation[0].asserted == report.statusInformation[0].asserted)
-                #expect(decoded.statusInformation[1].asserted == report.statusInformation[1].asserted)
-                #expect(decoded.statusInformation[2].asserted == report.statusInformation[2].asserted)
-                #expect(decoded.statusInformation[3].asserted == report.statusInformation[3].asserted)
-                #expect(decoded.reportReason == report.reportReason)
-                #expect(decoded.sourceNode == report.sourceNode)
-                #expect(decoded.timestamp == report.timestamp)
-            } catch {
-                #expect(Bool(false), "Decoding should not throw: \(error)")
-            }
+            let decoded = try StatusReport.decode(from: cbor)
+            #expect(decoded.statusInformation.count == 4)
+            #expect(decoded.statusInformation[0].asserted == report.statusInformation[0].asserted)
+            #expect(decoded.statusInformation[1].asserted == report.statusInformation[1].asserted)
+            #expect(decoded.statusInformation[2].asserted == report.statusInformation[2].asserted)
+            #expect(decoded.statusInformation[3].asserted == report.statusInformation[3].asserted)
+            #expect(decoded.reportReason == report.reportReason)
+            #expect(decoded.sourceNode == report.sourceNode)
+            #expect(decoded.timestamp == report.timestamp)
         } catch {
-            #expect(Bool(false), "Encoding should not throw: \(error)")
+            #expect(Bool(false), "Decoding should not throw: \(error)")
         }
     }
     
@@ -121,29 +117,24 @@ struct AdministrativeRecordTests {
         }
         
         // Test CBOR encoding
+        let cbor = record.encode()
+        // Check that CBOR encoding was successful
+        #expect(Bool(true))
+        
+        // Test decoding
         do {
-            let cbor = try record.encode()
-            // Check that CBOR encoding was successful
-            #expect(Bool(true))
-            
-            // Test decoding
-            do {
-                let decoded = try AdministrativeRecord.decode(from: cbor)
-                if case .bundleStatusReport(let statusReport) = decoded {
-                    #expect(statusReport.statusInformation.count == 4)
-                    #expect(statusReport.reportReason == report.reportReason)
-                    #expect(statusReport.sourceNode == report.sourceNode)
-                    #expect(statusReport.timestamp == report.timestamp)
-                } else {
-                    #expect(Bool(false), "Expected status report")
-                }
-            } catch {
-                #expect(Bool(false), "Decoding should not throw: \(error)")
+            let decoded = try AdministrativeRecord.decode(from: cbor)
+            if case .bundleStatusReport(let statusReport) = decoded {
+                #expect(statusReport.statusInformation.count == 4)
+                #expect(statusReport.reportReason == report.reportReason)
+                #expect(statusReport.sourceNode == report.sourceNode)
+                #expect(statusReport.timestamp == report.timestamp)
+            } else {
+                #expect(Bool(false), "Expected status report")
             }
         } catch {
-            #expect(Bool(false), "Encoding should not throw: \(error)")
+            #expect(Bool(false), "Decoding should not throw: \(error)")
         }
-        
         // Test to canonical block
         let block = record.toPayload()
         #expect(block.blockType == BlockType.payload.rawValue)

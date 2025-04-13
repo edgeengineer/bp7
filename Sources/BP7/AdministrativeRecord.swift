@@ -18,12 +18,12 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
     case mismatched(AdministrativeRecordTypeCode, [UInt8])
     
     /// Convert the administrative record to CBOR format
-    public func encode() throws -> CBOR {
+    public func encode() -> CBOR {
         switch self {
         case .bundleStatusReport(let statusReport):
             return .array([
                 .unsignedInt(UInt64(AdministrativeRecord.BUNDLE_STATUS_REPORT_TYPE_CODE)),
-                try statusReport.encode()
+                statusReport.encode()
             ])
         case .unknown(let code, let data), .mismatched(let code, let data):
             return .array([
@@ -34,7 +34,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
     }
     
     /// Decode an administrative record from CBOR format
-    public static func decode(from cbor: CBOR) throws -> AdministrativeRecord {
+    public static func decode(from cbor: CBOR) throws(BP7Error) -> AdministrativeRecord {
         guard case .array(let items) = cbor, items.count >= 2 else {
             throw BP7Error.invalidAdministrativeRecord
         }
@@ -58,25 +58,14 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
     
     /// Convert the administrative record to a payload block
     public func toPayload() -> CanonicalBlock {
-        do {
-            let data = try encode().encode()
-            return CanonicalBlock(
-                blockType: BlockType.payload.rawValue,
-                blockNumber: 1,
-                blockControlFlags: 0,
-                crc: .crcNo,
-                data: .data(data)
-            )
-        } catch {
-            // Return empty payload if encoding fails
-            return CanonicalBlock(
-                blockType: BlockType.payload.rawValue,
-                blockNumber: 1,
-                blockControlFlags: 0,
-                crc: .crcNo,
-                data: .data([])
-            )
-        }
+        let cbor = self.encode()
+        return CanonicalBlock(
+            blockType: BlockType.payload.rawValue,
+            blockNumber: 1,
+            blockControlFlags: 0,
+            crc: .crcNo,
+            data: .data(cbor.encode())
+        )
     }
 }
 
@@ -207,7 +196,7 @@ public struct BundleStatusItem: Equatable, Hashable, Sendable {
     }
     
     /// Decode a bundle status item from CBOR format
-    public static func decode(from cbor: CBOR) throws -> BundleStatusItem {
+    public static func decode(from cbor: CBOR) throws(BP7Error) -> BundleStatusItem {
         guard case .array(let items) = cbor, !items.isEmpty else {
             throw BP7Error.invalidBundleStatusItem
         }
@@ -343,7 +332,7 @@ public struct StatusReport: Equatable, Hashable, Sendable {
     }
     
     /// Convert the status report to CBOR format
-    public func encode() throws -> CBOR {
+    public func encode() -> CBOR {
         var items: [CBOR] = []
         
         // Add status information array
@@ -354,7 +343,7 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         items.append(.unsignedInt(UInt64(reportReason.rawValue)))
         
         // Add source node
-        items.append(try sourceNode.encode())
+        items.append(sourceNode.encode())
         
         // Add timestamp
         items.append(.array([
@@ -372,7 +361,7 @@ public struct StatusReport: Equatable, Hashable, Sendable {
     }
     
     /// Decode a status report from CBOR format
-    public static func decode(from cbor: CBOR) throws -> StatusReport {
+    public static func decode(from cbor: CBOR) throws(BP7Error) -> StatusReport {
         guard case .array(let items) = cbor, items.count >= 4 else {
             throw BP7Error.invalidStatusReport
         }
@@ -382,7 +371,9 @@ public struct StatusReport: Equatable, Hashable, Sendable {
             throw BP7Error.invalidStatusReport
         }
         
-        let statusInformation = try statusItems.map { try BundleStatusItem.decode(from: $0) }
+        let statusInformation = try statusItems.map { item throws(BP7Error) -> BundleStatusItem in
+            try BundleStatusItem.decode(from: item) 
+        }
         
         // Decode report reason
         guard case .unsignedInt(let reasonValue) = items[1] else {
@@ -447,8 +438,7 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         let admRecord = AdministrativeRecord.bundleStatusReport(statusReport)
         
         // Create primary block
-        let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(origBundle.primary.reportTo)
+        let primaryBlock = PrimaryBlockBuilder(destination: origBundle.primary.reportTo)
             .source(source)
             .reportTo(source)
             .bundleControlFlags([.bundleAdministrativeRecordPayload])

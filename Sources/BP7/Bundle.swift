@@ -68,7 +68,7 @@ public struct Bundle: Equatable, Sendable {
     }
     
     /// Convert the bundle to CBOR format
-    public func encode() throws -> [UInt8] {
+    public func encode() -> [UInt8] {
         var items: [CBOR] = []
         
         // Add primary block
@@ -85,7 +85,7 @@ public struct Bundle: Equatable, Sendable {
     }
     
     /// Decode a bundle from CBOR format
-    public static func decode(from data: [UInt8]) throws -> Bundle {
+    public static func decode(from data: [UInt8]) throws(BP7Error) -> Bundle {
         guard let cbor = try? CBOR.decode(data),
               case .array(let items) = cbor,
               !items.isEmpty else {
@@ -107,7 +107,7 @@ public struct Bundle: Equatable, Sendable {
             }
             
             // Create a primary block from the CBOR data
-            let builder = PrimaryBlockBuilder()
+            let builder = try PrimaryBlockBuilder.from(primaryCbor)
             // We need to extract and set all the fields from the CBOR data
             // For now, we'll use a simplified approach
             primary = try builder.build()
@@ -132,7 +132,7 @@ public struct Bundle: Equatable, Sendable {
     }
     
     /// Validate the bundle
-    public func validate() throws {
+    public func validate() throws(BP7Error) {
         // Validate primary block
         try primary.validate()
         

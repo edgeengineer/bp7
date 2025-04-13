@@ -23,7 +23,7 @@ public struct PrimaryBlockBuilder {
     private var version: UInt8 = PrimaryBlock.DTN_VERSION
     private var bundleControlFlags: BundleControlFlags = []
     private var crc: CrcValue = .crcNo
-    private var destination: EndpointID?
+    private var destination: EndpointID
     private var source: EndpointID?
     private var reportTo: EndpointID?
     private var creationTimestamp: CreationTimestamp?
@@ -32,7 +32,9 @@ public struct PrimaryBlockBuilder {
     private var totalDataLength: UInt64 = 0
     
     /// Create a new builder with default values
-    public init() {}
+    public init(destination: EndpointID) {
+        self.destination = destination
+    }
     
     /// Set the bundle protocol version (default is 7)
     public func version(_ version: UInt8) -> PrimaryBlockBuilder {
@@ -105,12 +107,7 @@ public struct PrimaryBlockBuilder {
     }
     
     /// Build the primary block
-    public func build() throws -> PrimaryBlock {
-        // Ensure required fields are set
-        guard let destination = destination else {
-            throw PrimaryBlockBuilderError.noDestination
-        }
-        
+    public func build() -> PrimaryBlock {
         // Use default values for optional fields
         let source = source ?? EndpointID.none()
         let reportTo = reportTo ?? EndpointID.none()
@@ -234,7 +231,7 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
     }
     
     /// Validate the primary block
-    public func validate() throws {
+    public func validate() throws(BP7Error) {
         var errors: [BP7Error] = []
         
         if version != PrimaryBlock.DTN_VERSION {
@@ -295,13 +292,13 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
         cborItems.append(.unsignedInt(UInt64(crc.toCode())))
         
         // Add destination
-        cborItems.append(try! destination.encode())
+        cborItems.append(destination.encode())
         
         // Add source
-        cborItems.append(try! source.encode())
+        cborItems.append(source.encode())
         
         // Add report-to
-        cborItems.append(try! reportTo.encode())
+        cborItems.append(reportTo.encode())
         
         // Add creation timestamp as an array
         cborItems.append(.array([
