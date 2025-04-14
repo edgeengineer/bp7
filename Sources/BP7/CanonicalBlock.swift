@@ -34,6 +34,7 @@ public enum CanonicalError: Error, Equatable, Sendable {
     case invalidCrc
     case decodingError(String)
     case encodingError(String)
+    case cborError(CBORError)
     
     public static func == (lhs: CanonicalError, rhs: CanonicalError) -> Bool {
         switch (lhs, rhs) {
@@ -47,6 +48,8 @@ public enum CanonicalError: Error, Equatable, Sendable {
             return lhsMsg == rhsMsg
         case (.encodingError(let lhsMsg), .encodingError(let rhsMsg)):
             return lhsMsg == rhsMsg
+        case (.cborError(let lhsError), .cborError(let rhsError)):
+            return lhsError == rhsError
         default:
             return false
         }
@@ -63,11 +66,11 @@ public enum CanonicalData: Equatable, Sendable {
     case decodingError
     
     /// Convert the canonical data to CBOR format
-    public func toCbor() throws -> [UInt8] {
+    public func toCbor() throws(CanonicalError) -> [UInt8] {
         switch self {
         case .hopCount(let limit, let count):
             // Encode as a tuple (limit, count)
-            let array: CBOR = .array([.unsignedInt(UInt64(limit)), .unsignedInt(UInt64(count))])
+            let array = CBOR.array([.unsignedInt(UInt64(limit)), .unsignedInt(UInt64(count))])
             return array.encode()
         case .data(let buffer):
             return buffer
@@ -76,7 +79,7 @@ public enum CanonicalData: Equatable, Sendable {
             return cbor.encode()
         case .previousNode(let eid):
             // Use EndpointID's encode method
-            let eidCbor = try eid.encode()
+            let eidCbor = eid.encode()
             return eidCbor.encode()
         case .unknown(let buffer):
             return buffer
@@ -132,7 +135,7 @@ public struct CanonicalBlockBuilder {
         return builder
     }
     
-    public func build() throws -> CanonicalBlock {
+    public func build() throws(CanonicalError) -> CanonicalBlock {
         guard let data = self.data else {
             throw CanonicalError.missingData
         }
@@ -175,7 +178,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     }
     
     /// Decode a CBOR byte array into a CanonicalBlock
-    public static func fromCbor(_ bytes: [UInt8]) throws -> CanonicalBlock {
+    public static func fromCbor(_ bytes: [UInt8]) throws(CanonicalError) -> CanonicalBlock {
         let decoded = try CBOR.decode(bytes)
         
         guard case .array(let items) = decoded, items.count >= 5 else {
@@ -312,8 +315,8 @@ public struct CanonicalBlock: Equatable, Sendable {
     }
     
     /// Validate this canonical block
-    public func validate() throws {
-        var errors: [Error] = []
+    public func validate() throws(CanonicalError) {
+        var errors: [CanonicalError] = []
         
         // Validate block control flags
         // Check if any reserved bits are set (bits 5-7)
@@ -341,7 +344,7 @@ public struct CanonicalBlock: Equatable, Sendable {
     }
     
     /// Validate the data in this block
-    private func validateData() throws {
+    private func validateData() throws(CanonicalError) {
         switch self.data {
         case .hopCount(let limit, let count):
             if self.blockType != BlockType.hopCount.rawValue {
@@ -398,13 +401,8 @@ public struct CanonicalBlock: Equatable, Sendable {
             let cbor: CBOR = .array([.unsignedInt(UInt64(limit)), .unsignedInt(UInt64(count))])
             elements.append(.byteString(cbor.encode()))
         case .previousNode(let eid):
-            do {
-                let eidCbor = try eid.encode()
-                elements.append(.byteString(eidCbor.encode()))
-            } catch {
-                // If encoding fails, use an empty byte string
-                elements.append(.byteString([]))
-            }
+            let eidCbor = eid.encode()
+            elements.append(.byteString(eidCbor.encode()))
         case .unknown(let data):
             elements.append(.byteString(data))
         case .decodingError:
@@ -509,7 +507,7 @@ extension CanonicalBlock {
         blockNumber: UInt64,
         blockControlFlags: BlockControlFlags,
         hopLimit: UInt8
-    ) throws {
+    ) {
         self.init(
             blockType: BlockType.hopCount.rawValue,
             blockNumber: blockNumber,
@@ -523,7 +521,7 @@ extension CanonicalBlock {
     public init(
         blockControlFlags: BlockControlFlags,
         payloadData: [UInt8]
-    ) throws {
+    ) {
         self.init(
             blockType: BlockType.payload.rawValue,
             blockNumber: BlockType.payload.rawValue,
@@ -538,7 +536,7 @@ extension CanonicalBlock {
         blockNumber: UInt64,
         blockControlFlags: BlockControlFlags,
         previousNode: EndpointID
-    ) throws {
+    ) {
         self.init(
             blockType: BlockType.previousNode.rawValue,
             blockNumber: blockNumber,
@@ -553,7 +551,7 @@ extension CanonicalBlock {
         blockNumber: UInt64,
         blockControlFlags: BlockControlFlags,
         bundleAge: UInt64
-    ) throws {
+    ) {
         self.init(
             blockType: BlockType.bundleAge.rawValue,
             blockNumber: blockNumber,

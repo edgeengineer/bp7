@@ -74,7 +74,7 @@ public enum EndpointID: Hashable, Equatable, Sendable, CustomStringConvertible {
     /// - Parameter uri: The URI string.
     /// - Returns: A new endpoint ID.
     /// - Throws: An error if the URI is invalid.
-    public static func from(_ uri: String) throws -> EndpointID {
+    public static func from(_ uri: String) throws(BP7Error) -> EndpointID {
         // Split the URI into scheme and SSP
         let parts = uri.split(separator: ":", maxSplits: 1)
         guard parts.count == 2 else {
@@ -98,7 +98,7 @@ public enum EndpointID: Hashable, Equatable, Sendable, CustomStringConvertible {
     /// - Parameter ssp: The SSP string.
     /// - Returns: A new DTN endpoint ID.
     /// - Throws: An error if the SSP is invalid.
-    private static func fromDTN(_ ssp: String) throws -> EndpointID {
+    private static func fromDTN(_ ssp: String) -> EndpointID {
         if ssp == "none" {
             return .none()
         }
@@ -129,7 +129,7 @@ public enum EndpointID: Hashable, Equatable, Sendable, CustomStringConvertible {
     /// - Parameter ssp: The SSP string.
     /// - Returns: A new IPN endpoint ID.
     /// - Throws: An error if the SSP is invalid.
-    private static func fromIPN(_ ssp: String) throws -> EndpointID {
+    private static func fromIPN(_ ssp: String) throws(BP7Error) -> EndpointID {
         // Split the SSP into node and service numbers
         let parts = ssp.split(separator: ".", maxSplits: 1)
         guard parts.count == 2 else {
@@ -232,7 +232,7 @@ public enum EndpointID: Hashable, Equatable, Sendable, CustomStringConvertible {
 
 // MARK: - CBOR Coding
 extension EndpointID {
-    public func encode() throws -> CBOR {
+    public func encode() -> CBOR {
         switch self {
         case .dtn(let eidType, let name):
             return .array([.unsignedInt(UInt64(eidType)), .textString(name.description)])
@@ -250,7 +250,7 @@ extension EndpointID {
         }
     }
     
-    public init(from cbor: CBOR) throws {
+    public init(from cbor: CBOR) throws(BP7Error) {
         guard case let .array(items) = cbor, items.count == 2 else {
             throw BP7Error.invalidBlock
         }
