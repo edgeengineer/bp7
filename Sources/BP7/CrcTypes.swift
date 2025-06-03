@@ -20,10 +20,10 @@ public enum CrcValue: Equatable, Hashable, Sendable {
     case crc32Empty
     
     /// CRC-16 with value
-    case crc16([UInt8])
+    case crc16(UInt16)
     
     /// CRC-32 with value
-    case crc32([UInt8])
+    case crc32(UInt32)
     
     /// Unknown CRC type
     case unknown(CrcRawType)
@@ -52,15 +52,29 @@ public enum CrcValue: Equatable, Hashable, Sendable {
         switch self {
         case .crcNo, .unknown:
             return nil
-        case .crc16(let buf):
-            return buf
+        case .crc16(let value):
+            return checksumToBytes(value)
         case .crc16Empty:
             return [0, 0]
-        case .crc32(let buf):
-            return buf
+        case .crc32(let value):
+            return checksumToBytes(value)
         case .crc32Empty:
             return [0, 0, 0, 0]
         }
+    }
+    
+    /// Convert a checksum to bytes
+    private func checksumToBytes<T: FixedWidthInteger>(_ checksum: T) -> [UInt8] {
+        var value = checksum
+        let size = MemoryLayout<T>.size
+        var bytes = [UInt8](repeating: 0, count: size)
+        
+        for i in 0..<size {
+            bytes[size - 1 - i] = UInt8(value & 0xFF)
+            value >>= 8
+        }
+        
+        return bytes
     }
 }
 
@@ -156,10 +170,9 @@ public enum BP7CRC {
             
             // Calculate CRC-16 using the external package
             let checksum = crc16(bytes: data)
-            let bytes = checksumToBytes(checksum)
             
             block.setCrc(crcBackup) // Restore original CRC
-            return .crc16(bytes)
+            return .crc16(checksum)
         case CRC32:
             let crcBackup = block.crcValue() // Backup original CRC
             block.resetCrc() // Set empty CRC
@@ -167,10 +180,9 @@ public enum BP7CRC {
             
             // Calculate CRC-32 using the external package
             let checksum = crc32(bytes: data)
-            let bytes = checksumToBytes(checksum)
             
             block.setCrc(crcBackup) // Restore original CRC
-            return .crc32(bytes)
+            return .crc32(checksum)
         default:
             fatalError("Unknown CRC type")
         }
@@ -187,29 +199,14 @@ public enum BP7CRC {
         return calculatedCrc.bytes() == block.crc()
     }
     
-    /// Convert a checksum to bytes
-    private static func checksumToBytes<T: FixedWidthInteger>(_ checksum: T) -> [UInt8] {
-        var value = checksum
-        let size = MemoryLayout<T>.size
-        var bytes = [UInt8](repeating: 0, count: size)
-        
-        for i in 0..<size {
-            bytes[size - 1 - i] = UInt8(value & 0xFF)
-            value >>= 8
-        }
-        
-        return bytes
-    }
     
     /// Calculate CRC-16 using the external package
     public static func crc16(bytes: [UInt8]) -> UInt16 {
-        // Use the external package directly
         return CyclicRedundancyCheck.crc16(bytes: bytes)
     }
     
     /// Calculate CRC-32 using the external package
     public static func crc32(bytes: [UInt8]) -> UInt32 {
-        // Use the external package directly
         return CyclicRedundancyCheck.crc32(bytes: bytes)
     }
 }
