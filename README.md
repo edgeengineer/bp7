@@ -3,9 +3,9 @@
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS%20Linux%20Windows-brightgreen.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![macOS](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=macOS)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
-[![Linux](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=Linux)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
-[![Windows](https://img.shields.io/github/actions/workflow/status/apache-edge/bp7/swift.yml?branch=main&label=Windows)](https://github.com/apache-edge/bp7/actions/workflows/swift.yml)
+[![macOS](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=macOS)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
+[![Linux](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Linux)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
+[![Windows](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Windows)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
 
 A cross-platform Swift 6 implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
 
@@ -64,7 +64,7 @@ The codebase uses conditional compilation to ensure compatibility across platfor
 Add the following dependency to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/apache-edge/bp7.git", from: "0.0.1")
+.package(url: "https://github.com/edgeengineer/bp7.git", from: "0.0.1")
 ```
 
 Then include "BP7" as a dependency in your target:
