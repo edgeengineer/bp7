@@ -212,9 +212,9 @@ public struct CanonicalBlock: Equatable, Sendable {
         
         // Determine CRC value
         let crc: CrcValue
-        if crcType == UInt64(CyclicRedundancyCheck.NO) {
+        if crcType == UInt64(BP7CRC.NO) {
             crc = .crcNo
-        } else if crcType == UInt64(CyclicRedundancyCheck.CRC16) {
+        } else if crcType == UInt64(BP7CRC.CRC16) {
             if items.count < 6 {
                 throw CanonicalError.decodingError("Missing CRC-16 data")
             }
@@ -223,11 +223,9 @@ public struct CanonicalBlock: Equatable, Sendable {
                 throw CanonicalError.decodingError("Invalid CRC-16 format")
             }
             
-            var crcData = [UInt8](repeating: 0, count: 2)
-            crcData[0] = crcBytes[0]
-            crcData[1] = crcBytes[1]
-            crc = .crc16(crcData)
-        } else if crcType == UInt64(CyclicRedundancyCheck.CRC32) {
+            let crcValue = UInt16(crcBytes[0]) << 8 | UInt16(crcBytes[1])
+            crc = .crc16(crcValue)
+        } else if crcType == UInt64(BP7CRC.CRC32) {
             if items.count < 6 {
                 throw CanonicalError.decodingError("Missing CRC-32 data")
             }
@@ -236,11 +234,8 @@ public struct CanonicalBlock: Equatable, Sendable {
                 throw CanonicalError.decodingError("Invalid CRC-32 format")
             }
             
-            var crcData = [UInt8](repeating: 0, count: 4)
-            for i in 0..<4 {
-                crcData[i] = crcBytes[i]
-            }
-            crc = .crc32(crcData)
+            let crcValue = UInt32(crcBytes[0]) << 24 | UInt32(crcBytes[1]) << 16 | UInt32(crcBytes[2]) << 8 | UInt32(crcBytes[3])
+            crc = .crc32(crcValue)
         } else {
             crc = .unknown(UInt8(truncatingIfNeeded: crcType))
         }
@@ -410,10 +405,12 @@ public struct CanonicalBlock: Equatable, Sendable {
         }
         
         // Add CRC value if needed
-        if case .crc16(let data) = self.crc {
-            elements.append(.byteString(data))
-        } else if case .crc32(let data) = self.crc {
-            elements.append(.byteString(data))
+        if case .crc16(let value) = self.crc {
+            let bytes = [(value >> 8) & 0xFF, value & 0xFF].map { UInt8($0) }
+            elements.append(.byteString(bytes))
+        } else if case .crc32(let value) = self.crc {
+            let bytes = [(value >> 24) & 0xFF, (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF].map { UInt8($0) }
+            elements.append(.byteString(bytes))
         }
         
         // Encode the array to CBOR
