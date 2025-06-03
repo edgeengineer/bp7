@@ -1,11 +1,10 @@
 # Bundle Protocol Version 7 (BP7)
 
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS%20Linux%20Windows-brightgreen.svg)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/Platforms-macOS%20iOS%20tvOS%20watchOS%20visionOS%20Linux-brightgreen.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![macOS](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=macOS)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
 [![Linux](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Linux)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
-[![Windows](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Windows)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
 
 A cross-platform Swift 6 implementation of Bundle Protocol Version 7 (BPv7) as defined in [RFC 9171](https://www.rfc-editor.org/rfc/rfc9171.txt).
 
@@ -18,14 +17,14 @@ Bundle Protocol Version 7 (BPv7) is a network protocol designed for Disruption T
 - High bit error rates
 - Asymmetric data rates
 
-This Swift package provides a native implementation of BPv7 for Apple platforms (macOS, iOS, tvOS, watchOS, visionOS), Linux, and Windows, allowing applications to create, process, and manage DTN bundles across all major operating systems.
+This Swift package provides a native implementation of BPv7 for Apple platforms (macOS, iOS, tvOS, watchOS, visionOS) and Linux, allowing applications to create, process, and manage DTN bundles across these platforms.
 
 ## Key Features
 
 - **Store-Carry-Forward Overlay Network**: Enables data transmission even when end-to-end connectivity is not available
 - **Late Binding**: Overlay-network endpoint identifiers to underlying network addresses
 - **Scheduled and Opportunistic Connectivity**: Takes advantage of both planned and unplanned connection opportunities
-- **Cross-Platform Support**: Works on macOS, iOS, tvOS, watchOS, visionOS, Linux, and Windows
+- **Cross-Platform Support**: Works on macOS, iOS, tvOS, watchOS, visionOS, and Linux
 - **Swift 6 Native**: Built with the latest Swift language features
 - **Swift Concurrency Support**: Built with the latest Swift concurrency features
 - **Comprehensive Security**: Supports Bundle Protocol Security (BPSec) as defined in RFC 9172
