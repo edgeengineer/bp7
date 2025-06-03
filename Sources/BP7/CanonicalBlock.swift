@@ -186,7 +186,21 @@ public struct CanonicalBlock: Equatable, Sendable {
             throw CanonicalError.decodingError("Failed to decode CBOR: \(error)")
         }
         
-        guard case .array(let items) = decoded, items.count >= 5 else {
+        guard case .array = decoded else {
+            throw CanonicalError.decodingError("Invalid CBOR format: expected array")
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try decoded.arrayValue() else {
+                throw CanonicalError.decodingError("Invalid CBOR format: expected array")
+            }
+            items = decodedItems
+        } catch {
+            throw CanonicalError.decodingError("Failed to decode CBOR array: \(error)")
+        }
+        
+        guard items.count >= 5 else {
             throw CanonicalError.decodingError("Invalid CBOR format: expected array with at least 5 items")
         }
         
@@ -211,7 +225,7 @@ public struct CanonicalBlock: Equatable, Sendable {
         }
         
         // Extract payload data
-        guard case .byteString(let rawPayload) = items[4] else {
+        guard let rawPayload = items[4].byteStringValue() else {
             throw CanonicalError.decodingError("Invalid payload format")
         }
         
@@ -224,7 +238,7 @@ public struct CanonicalBlock: Equatable, Sendable {
                 throw CanonicalError.decodingError("Missing CRC-16 data")
             }
             
-            guard case .byteString(let crcBytes) = items[5], crcBytes.count == 2 else {
+            guard let crcBytes = items[5].byteStringValue(), crcBytes.count == 2 else {
                 throw CanonicalError.decodingError("Invalid CRC-16 format")
             }
             
@@ -235,11 +249,15 @@ public struct CanonicalBlock: Equatable, Sendable {
                 throw CanonicalError.decodingError("Missing CRC-32 data")
             }
             
-            guard case .byteString(let crcBytes) = items[5], crcBytes.count == 4 else {
+            guard let crcBytes = items[5].byteStringValue(), crcBytes.count == 4 else {
                 throw CanonicalError.decodingError("Invalid CRC-32 format")
             }
             
-            let crcValue = UInt32(crcBytes[0]) << 24 | UInt32(crcBytes[1]) << 16 | UInt32(crcBytes[2]) << 8 | UInt32(crcBytes[3])
+            let byte0 = UInt32(crcBytes[0])
+            let byte1 = UInt32(crcBytes[1])
+            let byte2 = UInt32(crcBytes[2])
+            let byte3 = UInt32(crcBytes[3])
+            let crcValue = (byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3
             crc = .crc32(crcValue)
         } else {
             crc = .unknown(UInt8(truncatingIfNeeded: crcType))
@@ -263,7 +281,11 @@ public struct CanonicalBlock: Equatable, Sendable {
         } else if blockType == BlockType.hopCount.rawValue {
             do {
                 let hopCount = try CBOR.decode(rawPayload)
-                guard case .array(let hopCountItems) = hopCount, 
+                guard case .array = hopCount else {
+                    throw CanonicalError.decodingError("Invalid hop count format: expected array")
+                }
+                
+                guard let hopCountItems = try hopCount.arrayValue(),
                       hopCountItems.count == 2,
                       case .unsignedInt(let limitInt) = hopCountItems[0],
                       case .unsignedInt(let countInt) = hopCountItems[1],
@@ -393,29 +415,29 @@ public struct CanonicalBlock: Equatable, Sendable {
         // Add the data
         switch self.data {
         case .data(let data):
-            elements.append(.byteString(data))
+            elements.append(.byteString(ArraySlice(data)))
         case .bundleAge(let age):
             let cbor: CBOR = .unsignedInt(age)
-            elements.append(.byteString(cbor.encode()))
+            elements.append(.byteString(ArraySlice(cbor.encode())))
         case .hopCount(let limit, let count):
             let cbor: CBOR = .array([.unsignedInt(UInt64(limit)), .unsignedInt(UInt64(count))])
-            elements.append(.byteString(cbor.encode()))
+            elements.append(.byteString(ArraySlice(cbor.encode())))
         case .previousNode(let eid):
             let eidCbor = eid.encode()
-            elements.append(.byteString(eidCbor.encode()))
+            elements.append(.byteString(ArraySlice(eidCbor.encode())))
         case .unknown(let data):
-            elements.append(.byteString(data))
+            elements.append(.byteString(ArraySlice(data)))
         case .decodingError:
-            elements.append(.byteString([]))
+            elements.append(.byteString(ArraySlice([])))
         }
         
         // Add CRC value if needed
         if case .crc16(let value) = self.crc {
             let bytes = [(value >> 8) & 0xFF, value & 0xFF].map { UInt8($0) }
-            elements.append(.byteString(bytes))
+            elements.append(.byteString(ArraySlice(bytes)))
         } else if case .crc32(let value) = self.crc {
             let bytes = [(value >> 24) & 0xFF, (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF].map { UInt8($0) }
-            elements.append(.byteString(bytes))
+            elements.append(.byteString(ArraySlice(bytes)))
         }
         
         // Encode the array to CBOR

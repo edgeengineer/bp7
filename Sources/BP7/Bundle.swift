@@ -72,11 +72,11 @@ public struct Bundle: Equatable, Sendable {
         var items: [CBOR] = []
         
         // Add primary block
-        items.append(.byteString(primary.toCbor()))
+        items.append(.byteString(ArraySlice(primary.toCbor())))
         
         // Add canonical blocks
         for block in canonicals {
-            items.append(.byteString(block.toCbor()))
+            items.append(.byteString(ArraySlice(block.toCbor())))
         }
         
         // Encode as CBOR array
@@ -87,13 +87,26 @@ public struct Bundle: Equatable, Sendable {
     /// Decode a bundle from CBOR format
     public static func decode(from data: [UInt8]) throws(BP7Error) -> Bundle {
         guard let cbor = try? CBOR.decode(data),
-              case .array(let items) = cbor,
-              !items.isEmpty else {
+              case .array = cbor else {
+            throw BP7Error.invalidBundle
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cbor.arrayValue() else {
+                throw BP7Error.invalidBundle
+            }
+            items = decodedItems
+        } catch {
+            throw BP7Error.invalidBundle
+        }
+        
+        guard !items.isEmpty else {
             throw BP7Error.invalidBundle
         }
         
         // Decode primary block
-        guard case .byteString(let primaryData) = items[0] else {
+        guard let primaryData = items[0].byteStringValue() else {
             throw BP7Error.invalidBundle
         }
         
@@ -116,7 +129,7 @@ public struct Bundle: Equatable, Sendable {
         var canonicals: [CanonicalBlock] = []
         
         for i in 1..<items.count {
-            guard case .byteString(let blockData) = items[i] else {
+            guard let blockData = items[i].byteStringValue() else {
                 continue
             }
             

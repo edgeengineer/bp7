@@ -325,8 +325,18 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
     /// Initialize a PrimaryBlock from CBOR data
     public init(from cbor: [UInt8]) throws {
         // Decode CBOR data
-        guard let cborData = try? CBOR.decode(cbor),
-              case .array(let items) = cborData else {
+        let cborData = try CBOR.decode(cbor)
+        guard case .array = cborData else {
+            throw BP7Error.invalidBlock
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cborData.arrayValue() else {
+                throw BP7Error.invalidBlock
+            }
+            items = decodedItems
+        } catch {
             throw BP7Error.invalidBlock
         }
         
@@ -360,8 +370,21 @@ public struct PrimaryBlock: CrcBlock, Equatable, Hashable, Sendable {
         let reportTo = try EndpointID(from: items[5])
         
         // Extract creation timestamp
-        guard case .array(let timestampArray) = items[6],
-              timestampArray.count == 2,
+        guard case .array = items[6] else {
+            throw BP7Error.invalidBlock
+        }
+        
+        let timestampArray: [CBOR]
+        do {
+            guard let decodedTimestamp = try items[6].arrayValue() else {
+                throw BP7Error.invalidBlock
+            }
+            timestampArray = decodedTimestamp
+        } catch {
+            throw BP7Error.invalidBlock
+        }
+        
+        guard timestampArray.count == 2,
               case .unsignedInt(let dtnTime) = timestampArray[0],
               case .unsignedInt(let sequenceNumber) = timestampArray[1] else {
             throw BP7Error.invalidBlock

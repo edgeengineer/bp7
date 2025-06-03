@@ -191,7 +191,7 @@ public struct IntegrityBlock: Sendable {
             
             if let wrappedKey = parameters.wrappedKey {
                 let key = CBOR.unsignedInt(UInt64(wrappedKey.id))
-                let value = CBOR.byteString(wrappedKey.key)
+                let value = CBOR.byteString(ArraySlice(wrappedKey.key))
                 mapPairs.append(CBORMapPair(key: key, value: value))
             }
             
@@ -216,7 +216,7 @@ public struct IntegrityBlock: Sendable {
                 var targetResultsArray: [CBOR] = []
                 
                 for (targetNum, resultValue) in targetResults {
-                    let resultPair = CBOR.array([CBOR.unsignedInt(UInt64(targetNum)), CBOR.byteString(resultValue)])
+                    let resultPair = CBOR.array([CBOR.unsignedInt(UInt64(targetNum)), CBOR.byteString(ArraySlice(resultValue))])
                     targetResultsArray.append(resultPair)
                 }
                 

@@ -28,14 +28,28 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
         case .unknown(let code, let data), .mismatched(let code, let data):
             return .array([
                 .unsignedInt(UInt64(code)),
-                .byteString(data)
+                .byteString(ArraySlice(data))
             ])
         }
     }
     
     /// Decode an administrative record from CBOR format
     public static func decode(from cbor: CBOR) throws(BP7Error) -> AdministrativeRecord {
-        guard case .array(let items) = cbor, items.count >= 2 else {
+        guard case .array = cbor else {
+            throw BP7Error.invalidAdministrativeRecord
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cbor.arrayValue() else {
+                throw BP7Error.invalidAdministrativeRecord
+            }
+            items = decodedItems
+        } catch {
+            throw BP7Error.invalidAdministrativeRecord
+        }
+        
+        guard items.count >= 2 else {
             throw BP7Error.invalidAdministrativeRecord
         }
         
@@ -49,7 +63,7 @@ public enum AdministrativeRecord: Equatable, Hashable, Sendable {
             let statusReport = try StatusReport.decode(from: items[1])
             return .bundleStatusReport(statusReport)
         } else {
-            guard case .byteString(let data) = items[1] else {
+            guard let data = items[1].byteStringValue() else {
                 throw BP7Error.invalidAdministrativeRecord
             }
             return .unknown(code, data)
@@ -197,7 +211,21 @@ public struct BundleStatusItem: Equatable, Hashable, Sendable {
     
     /// Decode a bundle status item from CBOR format
     public static func decode(from cbor: CBOR) throws(BP7Error) -> BundleStatusItem {
-        guard case .array(let items) = cbor, !items.isEmpty else {
+        guard case .array = cbor else {
+            throw BP7Error.invalidBundleStatusItem
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cbor.arrayValue() else {
+                throw BP7Error.invalidBundleStatusItem
+            }
+            items = decodedItems
+        } catch {
+            throw BP7Error.invalidBundleStatusItem
+        }
+        
+        guard !items.isEmpty else {
             throw BP7Error.invalidBundleStatusItem
         }
         
@@ -362,12 +390,36 @@ public struct StatusReport: Equatable, Hashable, Sendable {
     
     /// Decode a status report from CBOR format
     public static func decode(from cbor: CBOR) throws(BP7Error) -> StatusReport {
-        guard case .array(let items) = cbor, items.count >= 4 else {
+        guard case .array = cbor else {
+            throw BP7Error.invalidStatusReport
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cbor.arrayValue() else {
+                throw BP7Error.invalidStatusReport
+            }
+            items = decodedItems
+        } catch {
+            throw BP7Error.invalidStatusReport
+        }
+        
+        guard items.count >= 4 else {
             throw BP7Error.invalidStatusReport
         }
         
         // Decode status information
-        guard case .array(let statusItems) = items[0] else {
+        guard case .array = items[0] else {
+            throw BP7Error.invalidStatusReport
+        }
+        
+        let statusItems: [CBOR]
+        do {
+            guard let decodedStatusItems = try items[0].arrayValue() else {
+                throw BP7Error.invalidStatusReport
+            }
+            statusItems = decodedStatusItems
+        } catch {
             throw BP7Error.invalidStatusReport
         }
         
@@ -386,8 +438,21 @@ public struct StatusReport: Equatable, Hashable, Sendable {
         let sourceNode = try EndpointID(from: items[2])
         
         // Decode timestamp
-        guard case .array(let timestampArray) = items[3],
-              timestampArray.count == 2,
+        guard case .array = items[3] else {
+            throw BP7Error.invalidStatusReport
+        }
+        
+        let timestampArray: [CBOR]
+        do {
+            guard let decodedTimestamp = try items[3].arrayValue() else {
+                throw BP7Error.invalidStatusReport
+            }
+            timestampArray = decodedTimestamp
+        } catch {
+            throw BP7Error.invalidStatusReport
+        }
+        
+        guard timestampArray.count == 2,
               case .unsignedInt(let dtnTime) = timestampArray[0],
               case .unsignedInt(let seqNo) = timestampArray[1] else {
             throw BP7Error.invalidStatusReport

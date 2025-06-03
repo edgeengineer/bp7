@@ -251,7 +251,21 @@ extension EndpointID {
     }
     
     public init(from cbor: CBOR) throws(BP7Error) {
-        guard case let .array(items) = cbor, items.count == 2 else {
+        guard case .array = cbor else {
+            throw BP7Error.invalidBlock
+        }
+        
+        let items: [CBOR]
+        do {
+            guard let decodedItems = try cbor.arrayValue() else {
+                throw BP7Error.invalidBlock
+            }
+            items = decodedItems
+        } catch {
+            throw BP7Error.invalidBlock
+        }
+        
+        guard items.count == 2 else {
             throw BP7Error.invalidBlock
         }
         
@@ -264,11 +278,15 @@ extension EndpointID {
         if eidType == EndpointScheme.DTN {
             // Handle DTN scheme
             switch items[1] {
-            case .textString(let name):
-                if name.isEmpty {
-                    self = EndpointID.none()
+            case .textString:
+                if let name = items[1].stringValue {
+                    if name.isEmpty {
+                        self = EndpointID.none()
+                    } else {
+                        self = EndpointID.dtn(eidType, DTNAddress(name))
+                    }
                 } else {
-                    self = EndpointID.dtn(eidType, DTNAddress(name))
+                    throw BP7Error.invalidBlock
                 }
                 
             case .unsignedInt(let value):
@@ -283,7 +301,21 @@ extension EndpointID {
             }
         } else if eidType == EndpointScheme.IPN {
             // Handle IPN scheme
-            guard case let .array(ipnItems) = items[1], ipnItems.count == 2,
+            guard case .array = items[1] else {
+                throw BP7Error.invalidBlock
+            }
+            
+            let ipnItems: [CBOR]
+            do {
+                guard let decodedIpnItems = try items[1].arrayValue() else {
+                    throw BP7Error.invalidBlock
+                }
+                ipnItems = decodedIpnItems
+            } catch {
+                throw BP7Error.invalidBlock
+            }
+            
+            guard ipnItems.count == 2,
                   case let .unsignedInt(nodeNumber) = ipnItems[0],
                   case let .unsignedInt(serviceNumber) = ipnItems[1] else {
                 throw BP7Error.invalidBlock
