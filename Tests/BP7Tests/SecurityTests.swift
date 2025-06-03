@@ -72,8 +72,8 @@ struct SecurityTests {
     @Test("Integrity Protected Plaintext")
     func testIntegrityProtectedPlaintext() {
         // Create a primary block
-        let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let primaryBlock = try! PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))

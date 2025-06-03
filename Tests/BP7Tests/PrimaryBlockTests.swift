@@ -7,8 +7,8 @@ struct PrimaryBlockTests {
     @Test("Primary Block Creation")
     func testPrimaryBlockCreation() {
         // Create a primary block using the builder
-        let builder = PrimaryBlockBuilder()
-            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let builder = PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
@@ -113,8 +113,8 @@ struct PrimaryBlockTests {
     @Test("Primary Block CBOR Serialization")
     func testPrimaryBlockCborSerialization() throws {
         // Create a primary block
-        let primaryBlock = try PrimaryBlockBuilder()
-            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let primaryBlock = try PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
@@ -168,8 +168,8 @@ struct PrimaryBlockTests {
     @Test("Primary Block Builder")
     func testPrimaryBlockBuilder() {
         // Create a primary block using the builder
-        let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let primaryBlock = try! PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
@@ -190,17 +190,19 @@ struct PrimaryBlockTests {
     
     @Test("Primary Block Builder Validation")
     func testPrimaryBlockBuilderValidation() {
-        // Create a builder without setting a destination
-        let builder = PrimaryBlockBuilder()
+        // Create a builder with valid destination - this test now validates that building succeeds
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let builder = PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .lifetime(3600)
         
-        // Attempt to build, should fail
+        // Attempt to build, should succeed since destination is provided
         do {
-            _ = try builder.build()
-            #expect(Bool(false), "Build should have failed due to missing destination")
+            let primaryBlock = builder.build()
+            #expect(primaryBlock.destination.description == "dtn://destination/")
+            #expect(Bool(true), "Build succeeded as expected")
         } catch {
-            #expect(Bool(true), "Build failed as expected")
+            #expect(Bool(false), "Build should not have failed: \(error)")
         }
     }
     
@@ -237,8 +239,8 @@ struct PrimaryBlockTests {
     @Test("Primary Block CBOR Encoding")
     func testPrimaryBlockCborEncoding() {
         // Create a primary block
-        let primaryBlock = try! PrimaryBlockBuilder()
-            .destination(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/")))
+        let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
+        let primaryBlock = try! PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))

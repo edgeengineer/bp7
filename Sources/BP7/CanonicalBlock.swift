@@ -48,8 +48,8 @@ public enum CanonicalError: Error, Equatable, Sendable {
             return lhsMsg == rhsMsg
         case (.encodingError(let lhsMsg), .encodingError(let rhsMsg)):
             return lhsMsg == rhsMsg
-        case (.cborError(let lhsError), .cborError(let rhsError)):
-            return lhsError == rhsError
+        case (.cborError(_), .cborError(_)):
+            return true
         default:
             return false
         }
@@ -179,7 +179,12 @@ public struct CanonicalBlock: Equatable, Sendable {
     
     /// Decode a CBOR byte array into a CanonicalBlock
     public static func fromCbor(_ bytes: [UInt8]) throws(CanonicalError) -> CanonicalBlock {
-        let decoded = try CBOR.decode(bytes)
+        let decoded: CBOR
+        do {
+            decoded = try CBOR.decode(bytes)
+        } catch {
+            throw CanonicalError.decodingError("Failed to decode CBOR: \(error)")
+        }
         
         guard case .array(let items) = decoded, items.count >= 5 else {
             throw CanonicalError.decodingError("Invalid CBOR format: expected array with at least 5 items")

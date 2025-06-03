@@ -107,10 +107,7 @@ public struct Bundle: Equatable, Sendable {
             }
             
             // Create a primary block from the CBOR data
-            let builder = try PrimaryBlockBuilder.from(primaryCbor)
-            // We need to extract and set all the fields from the CBOR data
-            // For now, we'll use a simplified approach
-            primary = try builder.build()
+            primary = try PrimaryBlock(from: primaryData)
         } catch {
             throw BP7Error.invalidBundle
         }
