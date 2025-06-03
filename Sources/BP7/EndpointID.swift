@@ -86,7 +86,7 @@ public enum EndpointID: Hashable, Equatable, Sendable, CustomStringConvertible {
         
         switch scheme.lowercased() {
         case "dtn":
-            return try fromDTN(ssp)
+            return fromDTN(ssp)
         case "ipn":
             return try fromIPN(ssp)
         default:

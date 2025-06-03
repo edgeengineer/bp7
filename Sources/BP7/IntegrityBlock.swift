@@ -176,7 +176,7 @@ public struct IntegrityBlock: Sendable {
         cborFormat += securityContextFlagsValue.encode()
         
         // Encode security source using its encode method
-        let securitySourceCbor = try self.securitySource.encode()
+        let securitySourceCbor = self.securitySource.encode()
         cborFormat += securitySourceCbor.encode()
         
         // Encode security context parameters if present

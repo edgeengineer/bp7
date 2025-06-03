@@ -66,23 +66,23 @@ fileprivate final class OSMutex<Value: Sendable>: @unchecked Sendable {
     }
     #elseif os(Windows)
     // Thread-safe implementation for Windows using SRWLock
-    private var lock = SRWLOCK()
+    private var srwLock = SRWLOCK()
     
     init(_ value: Value) {
-        InitializeSRWLock(&lock)
+        InitializeSRWLock(&srwLock)
         self.value = value
     }
 
     deinit {
-        DeleteSRWLock(&lock)
+        DeleteSRWLock(&srwLock)
     }
 
     func lock() {
-        AcquireSRWLockExclusive(&lock)
+        AcquireSRWLockExclusive(&srwLock)
     }
 
     func unlock() {
-        ReleaseSRWLockExclusive(&lock)
+        ReleaseSRWLockExclusive(&srwLock)
     }
     #endif
 }
