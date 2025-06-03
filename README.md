@@ -64,7 +64,7 @@ The codebase uses conditional compilation to ensure compatibility across platfor
 Add the following dependency to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/edgeengineer/bp7.git", from: "0.0.3")
+.package(url: "https://github.com/edgeengineer/bp7.git", from: "0.0.4")
 ```
 
 Then include "BP7" as a dependency in your target:
