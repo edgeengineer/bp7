@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "bp7",
     platforms: [
-        .macOS(.v10_15),
+        .macOS(.v13),
         .iOS(.v13),
         .tvOS(.v13),
         .watchOS(.v6),
