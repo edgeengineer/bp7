@@ -15,7 +15,7 @@ struct PrimaryBlockTests {
             .lifetime(3600)
             .bundleControlFlags([.bundleMustNotFragmented])
         
-        let primaryBlock = try! builder.build()
+        let primaryBlock = builder.build()
         
         // Verify the block properties
         #expect(primaryBlock.version == 7)
@@ -169,7 +169,7 @@ struct PrimaryBlockTests {
     func testPrimaryBlockBuilder() {
         // Create a primary block using the builder
         let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
-        let primaryBlock = try! PrimaryBlockBuilder(destination: destination)
+        let primaryBlock = PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
@@ -224,11 +224,15 @@ struct PrimaryBlockTests {
         do {
             try primaryBlock.validate()
             #expect(Bool(false), "Validation should have failed due to invalid version")
-        } catch let error as BP7Error {
-            switch error {
-            case .invalidValue:
-                #expect(Bool(true), "Validation failed with invalid value error as expected")
-            default:
+        } catch let error {
+            if let bp7Error = error as? BP7Error {
+                switch bp7Error {
+                case .invalidValue:
+                    #expect(Bool(true), "Validation failed with invalid value error as expected")
+                default:
+                    #expect(Bool(false), "Unexpected error type: \(error)")
+                }
+            } else {
                 #expect(Bool(false), "Unexpected error type: \(error)")
             }
         } catch {
@@ -240,7 +244,7 @@ struct PrimaryBlockTests {
     func testPrimaryBlockCborEncoding() {
         // Create a primary block
         let destination = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//destination/"))
-        let primaryBlock = try! PrimaryBlockBuilder(destination: destination)
+        let primaryBlock = PrimaryBlockBuilder(destination: destination)
             .source(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//source/")))
             .reportTo(EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//report-to/")))
             .creationTimestamp(CreationTimestamp(time: 1000, sequenceNumber: 1))
