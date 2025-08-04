@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "bp7",
+    name: "DisruptionTolerantNetworking",
     platforms: [
         .macOS(.v13),
         .iOS(.v13),
@@ -17,12 +17,20 @@ let package = Package(
         .library(
             name: "BP7",
             targets: ["BP7"]),
+        .library(
+            name: "DisruptionTolerantNetworking",
+            targets: ["DisruptionTolerantNetworking"]),
+        .library(
+            name: "TransportServices",
+            targets: ["TransportServices"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/edgeengineer/cbor.git", from: "0.0.6"),
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0" ..< "4.0.0"),
-        .package(url: "https://github.com/edgeengineer/cyclic-redundancy-check.git", from: "0.0.2"),
+        .package(url: "https://github.com/edgeengineer/cyclic-redundancy-check.git", from: "0.0.4"),
+        .package(url: "https://github.com/apple/swift-nio", from: "2.0.0"),
+        .package(url: "https://github.com/apple/swift-nio-ssl", from: "2.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -35,6 +43,18 @@ let package = Package(
                 .product(name: "CyclicRedundancyCheck", package: "cyclic-redundancy-check")
             ]
         ),
+        .target(
+            name: "DisruptionTolerantNetworking",
+            dependencies: ["BP7"]),
+        .target(
+            name: "TransportServices",
+            dependencies: [
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "NIOSSL", package: "swift-nio-ssl"),
+                .product(name: "Crypto", package: "swift-crypto"),
+            ]),
         .testTarget(
             name: "BP7Tests",
             dependencies: ["BP7"]
