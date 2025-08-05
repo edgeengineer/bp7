@@ -28,7 +28,7 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/edgeengineer/cbor.git", from: "0.0.6"),
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0" ..< "4.0.0"),
-        .package(url: "https://github.com/edgeengineer/cyclic-redundancy-check.git", from: "0.0.4"),
+        .package(url: "https://github.com/edgeengineer/cyclic-redundancy-check.git", from: "0.0.5"),
         .package(url: "https://github.com/apple/swift-nio", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-nio-ssl", from: "2.0.0"),
     ],
