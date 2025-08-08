@@ -91,19 +91,30 @@ let package = Package(
 import BP7
 
 // Create endpoint identifiers
-let sourceEID = try EndpointID(uri: "dtn://node1.dtn/app")
-let destinationEID = try EndpointID(uri: "dtn://node2.dtn/app")
+let sourceEID = try EndpointID.from("dtn://node1.dtn/app")
+let destinationEID = try EndpointID.from("dtn://node2.dtn/app")
 
-// Create a bundle with basic configuration
-let bundle = try Bundle(
-    source: sourceEID,
-    destination: destinationEID,
-    creationTimestamp: Date(),
-    lifetime: 3600, // 1 hour lifetime
-    payload: "Hello, DTN World!".data(using: .utf8)!
+// Create a primary block using the builder
+let primaryBlock = PrimaryBlockBuilder(destination: destinationEID)
+    .source(sourceEID)
+    .reportTo(EndpointID.none())
+    .creationTimestamp(CreationTimestamp.now())
+    .lifetime(3600.0) // 1 hour lifetime
+    .bundleControlFlags([.bundleMustNotFragmented])
+    .build()
+
+// Create a payload block
+let payloadData = "Hello, DTN World!".data(using: .utf8)!
+let payloadBlock = CanonicalBlock(
+    blockControlFlags: [],
+    payloadData: Array(payloadData)
 )
 
-print("Created bundle with ID:", bundle.bundleID)
+// Create the complete bundle
+let bundle = Bundle(primary: primaryBlock, canonicals: [payloadBlock])
+
+print("Created bundle from:", bundle.primary.source)
+print("Created bundle to:", bundle.primary.destination)
 ```
 
 ### 2. Encoding and Decoding Bundles
@@ -111,25 +122,36 @@ print("Created bundle with ID:", bundle.bundleID)
 ```swift
 import BP7
 
-// Create a bundle
-let bundle = try Bundle(
-    source: EndpointID(uri: "dtn://sender.dtn/app"),
-    destination: EndpointID(uri: "dtn://receiver.dtn/app"),
-    creationTimestamp: Date(),
-    lifetime: 7200,
-    payload: "Bundle payload data".data(using: .utf8)!
+// Create endpoint identifiers
+let source = try EndpointID.from("dtn://sender.dtn/app")
+let destination = try EndpointID.from("dtn://receiver.dtn/app")
+
+// Create a primary block
+let primary = PrimaryBlockBuilder(destination: destination)
+    .source(source)
+    .creationTimestamp(CreationTimestamp.now())
+    .lifetime(7200.0)
+    .build()
+
+// Create payload block
+let payloadData = "Bundle payload data".data(using: .utf8)!
+let payloadBlock = CanonicalBlock(
+    blockControlFlags: [],
+    payloadData: Array(payloadData)
 )
+
+// Create bundle
+let bundle = Bundle(primary: primary, canonicals: [payloadBlock])
 
 // Encode the bundle to wire format
 do {
-    let encoder = BP7Encoder()
-    let encodedData = try encoder.encode(bundle)
+    let encodedData = bundle.encode()
     print("Encoded bundle size:", encodedData.count, "bytes")
     
     // Decode the bundle from wire format
-    let decoder = BP7Decoder()
-    let decodedBundle = try decoder.decode(Bundle.self, from: encodedData)
-    print("Successfully decoded bundle:", decodedBundle.bundleID)
+    let decodedBundle = try Bundle.decode(from: encodedData)
+    print("Successfully decoded bundle from:", decodedBundle.primary.source)
+    print("Successfully decoded bundle to:", decodedBundle.primary.destination)
 } catch {
     print("Encoding/Decoding error:", error)
 }
@@ -140,33 +162,54 @@ do {
 ```swift
 import BP7
 
-// Create a bundle with additional blocks
-var bundle = try Bundle(
-    source: EndpointID(uri: "dtn://node1.dtn/service"),
-    destination: EndpointID(uri: "dtn://node2.dtn/service"),
-    creationTimestamp: Date(),
-    lifetime: 1800,
-    payload: Data()
+// Create endpoints
+let source = try EndpointID.from("dtn://node1.dtn/service")
+let destination = try EndpointID.from("dtn://node2.dtn/service")
+
+// Create primary block
+let primary = PrimaryBlockBuilder(destination: destination)
+    .source(source)
+    .creationTimestamp(CreationTimestamp.now())
+    .lifetime(1800.0)
+    .build()
+
+// Create payload block
+let payloadBlock = CanonicalBlock(
+    blockControlFlags: [],
+    payloadData: []
 )
 
-// Add a hop count block
-let hopCountBlock = HopCountBlock(hopLimit: 10, hopCount: 0)
-try bundle.addBlock(hopCountBlock)
-
-// Add a previous node block
-let previousNodeBlock = PreviousNodeBlock(
-    nodeID: EndpointID(uri: "dtn://router.dtn/")
+// Create a hop count block
+let hopCountBlock = CanonicalBlock(
+    blockNumber: 2,
+    blockControlFlags: [],
+    hopLimit: 10
 )
-try bundle.addBlock(previousNodeBlock)
 
-// Add metadata extension block
-let metadataBlock = MetadataBlock(metadata: [
-    "priority": "high",
-    "category": "telemetry"
+// Create a previous node block
+let routerEID = try EndpointID.from("dtn://router.dtn/")
+let previousNodeBlock = CanonicalBlock(
+    blockNumber: 3,
+    blockControlFlags: [],
+    previousNode: routerEID
+)
+
+// Create a bundle age block
+let bundleAgeBlock = CanonicalBlock(
+    blockNumber: 4,
+    blockControlFlags: [],
+    bundleAge: 0
+)
+
+// Create the bundle with all blocks
+var bundle = Bundle(primary: primary, canonicals: [
+    payloadBlock,
+    hopCountBlock,
+    previousNodeBlock,
+    bundleAgeBlock
 ])
-try bundle.addBlock(metadataBlock)
 
-print("Bundle now has", bundle.blocks.count, "total blocks")
+print("Bundle now has", bundle.canonicals.count, "canonical blocks")
 ```
 
 ### 4. Bundle Processing
@@ -174,30 +217,30 @@ print("Bundle now has", bundle.blocks.count, "total blocks")
 ```swift
 import BP7
 
-// Simulate receiving a bundle from the network
-let receivedData: Data = // ... bundle data from network
-let decoder = BP7Decoder()
+// Simulate receiving bundle data from the network
+let receivedData: [UInt8] = // ... bundle data from network
 
 do {
-    let bundle = try decoder.decode(Bundle.self, from: receivedData)
+    let bundle = try Bundle.decode(from: receivedData)
     
-    // Check if bundle is still valid (not expired)
-    if bundle.isExpired {
+    // Check if bundle has expired
+    if bundle.primary.hasExpired() {
         print("Bundle has expired, discarding")
         return
     }
     
     // Check if this node is the destination
-    let localNodeID = EndpointID(uri: "dtn://local.dtn/")
-    if bundle.destination.matches(localNodeID) {
+    let localNodeID = try EndpointID.from("dtn://local.dtn/")
+    if bundle.primary.destination.description.contains("local.dtn") {
         print("Bundle delivered to local node")
+        
         // Process payload
-        if let payloadData = bundle.payloadData {
-            let payload = String(data: payloadData, encoding: .utf8)
+        if let payloadData = bundle.payload() {
+            let payload = String(bytes: payloadData, encoding: .utf8)
             print("Payload:", payload ?? "Binary data")
         }
     } else {
-        print("Bundle needs forwarding to:", bundle.destination)
+        print("Bundle needs forwarding to:", bundle.primary.destination)
         // Implement routing logic here
     }
     
@@ -212,25 +255,25 @@ do {
 import BP7
 
 do {
-    let bundle = try Bundle(
-        source: EndpointID(uri: "invalid://uri"),
-        destination: EndpointID(uri: "dtn://valid.dtn/app"),
-        creationTimestamp: Date(),
-        lifetime: 3600,
-        payload: Data()
-    )
+    let invalidEID = try EndpointID.from("invalid://uri")
+    let validEID = try EndpointID.from("dtn://valid.dtn/app")
+    
+    let primary = PrimaryBlockBuilder(destination: validEID)
+        .source(invalidEID)
+        .build()
+        
 } catch let error as BP7Error {
     switch error {
-    case .invalidEndpointID(let uri):
-        print("Invalid endpoint ID: \(uri)")
-    case .bundleExpired:
-        print("Bundle has expired")
-    case .invalidBlockType(let type):
-        print("Unsupported block type: \(type)")
-    case .encodingError(let description):
-        print("Encoding failed: \(description)")
+    case .endpointID(let eidError):
+        print("EndpointID error:", eidError)
+    case .invalidBundle:
+        print("Invalid bundle")
+    case .invalidBlock:
+        print("Invalid block")
+    case .invalidValue:
+        print("Invalid value")
     default:
-        print("BP7 error:", error.localizedDescription)
+        print("BP7 error:", error.description)
     }
 } catch {
     print("Unexpected error:", error)
@@ -242,30 +285,44 @@ do {
 ```swift
 import BP7
 
-// Create a bundle with advanced options
-var bundle = try Bundle(
-    source: EndpointID(uri: "dtn://source.dtn/app"),
-    destination: EndpointID(uri: "dtn://dest.dtn/app"),
-    reportTo: EndpointID(uri: "dtn://reports.dtn/status"),
-    creationTimestamp: Date(),
-    sequenceNumber: 12345,
-    lifetime: 86400, // 24 hours
-    priority: .expedited,
-    requestStatusReports: [.reception, .delivery, .deletion],
-    fragmentationAllowed: true,
-    payload: "Critical mission data".data(using: .utf8)!
+// Create endpoints
+let source = try EndpointID.from("dtn://source.dtn/app")
+let destination = try EndpointID.from("dtn://dest.dtn/app")
+let reportTo = try EndpointID.from("dtn://reports.dtn/status")
+
+// Create a primary block with advanced options
+let primary = PrimaryBlockBuilder(destination: destination)
+    .source(source)
+    .reportTo(reportTo)
+    .creationTimestamp(CreationTimestamp(time: DisruptionTolerantNetworkingTime.now(), sequenceNumber: 12345))
+    .lifetime(86400.0) // 24 hours
+    .bundleControlFlags([
+        .bundleStatusRequestReception,
+        .bundleStatusRequestDelivery,
+        .bundleRequestStatusTime
+    ])
+    .build()
+
+// Create payload with critical data
+let criticalData = "Critical mission data".data(using: .utf8)!
+let payloadBlock = CanonicalBlock(
+    blockControlFlags: [.blockReplicate], // Replicate in fragments
+    payloadData: Array(criticalData)
 )
 
-// Set bundle processing flags
-bundle.setFlag(.mustNotFragment, to: false)
-bundle.setFlag(.applicationDataUnit, to: true)
-bundle.setFlag(.isFragment, to: false)
+// Create a bundle age block to track age
+let ageBlock = CanonicalBlock(
+    blockNumber: 7, // Bundle Age block type
+    blockControlFlags: [],
+    bundleAge: 0
+)
 
-// Add routing and security blocks as needed
-let ageBlock = AgeBlock(ageInMicroseconds: 0)
-try bundle.addBlock(ageBlock)
+// Create the bundle with CRC protection
+var bundle = Bundle(primary: primary, canonicals: [payloadBlock, ageBlock])
+bundle.setCrc(.crc32Empty) // Add CRC-32 protection to all blocks
 
-print("Advanced bundle configured with", bundle.blocks.count, "blocks")
+print("Advanced bundle configured with", bundle.canonicals.count, "canonical blocks")
+print("Bundle has CRC protection:", bundle.primary.hasCrc())
 ```
 
 ## Bundle Protocol Concepts
