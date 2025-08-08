@@ -6,7 +6,6 @@
 [![macOS](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=macOS)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
 [![Linux](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Linux)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
 [![Windows](https://img.shields.io/github/actions/workflow/status/edgeengineer/bp7/swift.yml?branch=main&label=Windows)](https://github.com/edgeengineer/bp7/actions/workflows/swift.yml)
-[![Documentation](https://img.shields.io/badge/Documentation-DocC-blue)](https://edgeengineer.github.io/bp7/documentation/bp7/)
 
 BP7 is a lightweight implementation of the [Bundle Protocol Version 7](https://tools.ietf.org/rfc/rfc9171.txt) in Swift. Bundle Protocol Version 7 (BP7) is defined in RFC 9171 and provides a store-and-forward overlay network protocol for delay-tolerant networking (DTN). This implementation allows you to create, encode, decode, and manipulate BP7 bundles with full support for the protocol specification.
 
@@ -36,7 +35,6 @@ BP7 is a lightweight implementation of the [Bundle Protocol Version 7](https://t
 ## Table of Contents
 
 - [Features](#features)
-- [Documentation](#documentation)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
   - [Creating a Simple Bundle](#1-creating-a-simple-bundle)
@@ -47,13 +45,6 @@ BP7 is a lightweight implementation of the [Bundle Protocol Version 7](https://t
   - [Advanced Bundle Configuration](#6-advanced-bundle-configuration)
 - [Bundle Protocol Concepts](#bundle-protocol-concepts)
 - [License](#license)
-
-## Documentation
-
-Comprehensive documentation is available via DocC:
-
-- [Online Documentation](https://edgeengineer.github.io/bp7/documentation/bp7/)
-- Generate locally with: `swift package --allow-writing-to-directory ./docs generate-documentation --target BP7`
 
 For more information about the Bundle Protocol specification, see [RFC 9171](https://tools.ietf.org/rfc/rfc9171.txt).
 
