@@ -158,7 +158,7 @@ struct AdministrativeRecordTests {
         
         let bundle = Bundle(
             primary: primaryBlock,
-            canonicals: [try! CanonicalBlock(blockControlFlags: BlockControlFlags(), payloadData: [1, 2, 3, 4, 5])]
+            canonicals: [CanonicalBlock(blockControlFlags: BlockControlFlags(), payloadData: [1, 2, 3, 4, 5])]
         )
         
         // Create status report
@@ -196,7 +196,7 @@ struct AdministrativeRecordTests {
         
         let bundle = Bundle(
             primary: primaryBlock,
-            canonicals: [try! CanonicalBlock(blockControlFlags: BlockControlFlags(), payloadData: [1, 2, 3, 4, 5])]
+            canonicals: [CanonicalBlock(blockControlFlags: BlockControlFlags(), payloadData: [1, 2, 3, 4, 5])]
         )
         
         // Create status report bundle

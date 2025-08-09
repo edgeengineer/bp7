@@ -12,7 +12,7 @@ struct CanonicalTests {
             let payload: [UInt8] = [1, 2, 3, 4, 5]
             
             // Create a payload block
-            let block = try CanonicalBlock(
+            let block = CanonicalBlock(
                 blockControlFlags: BlockControlFlags(),
                 payloadData: payload
             )
@@ -27,8 +27,6 @@ struct CanonicalTests {
             } else {
                 #expect(Bool(false), "Expected payload data")
             }
-        } catch {
-            #expect(Bool(false), "Creating payload block should not throw: \(error)")
         }
         
         // Test hop count block
@@ -36,7 +34,7 @@ struct CanonicalTests {
             let limit: UInt8 = 10
             
             // Create a hop count block
-            var block = try CanonicalBlock(
+            var block = CanonicalBlock(
                 blockNumber: 2,
                 blockControlFlags: BlockControlFlags(),
                 hopLimit: limit
@@ -64,8 +62,6 @@ struct CanonicalTests {
             } else {
                 #expect(Bool(false), "Expected hop count data after increment")
             }
-        } catch {
-            #expect(Bool(false), "Creating hop count block should not throw: \(error)")
         }
         
         // Test bundle age block
@@ -73,7 +69,7 @@ struct CanonicalTests {
             let age: UInt64 = 1000
             
             // Create a bundle age block
-            var block = try CanonicalBlock(
+            var block = CanonicalBlock(
                 blockNumber: 3,
                 blockControlFlags: BlockControlFlags(),
                 bundleAge: age
@@ -99,8 +95,6 @@ struct CanonicalTests {
             } else {
                 #expect(Bool(false), "Expected updated bundle age data")
             }
-        } catch {
-            #expect(Bool(false), "Creating bundle age block should not throw: \(error)")
         }
         
         // Test previous node block
@@ -108,7 +102,7 @@ struct CanonicalTests {
             let dtnNode = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//node1/"))
             
             // Create a previous node block
-            let block = try CanonicalBlock(
+            let block = CanonicalBlock(
                 blockNumber: 4,
                 blockControlFlags: BlockControlFlags(),
                 previousNode: dtnNode
@@ -124,53 +118,43 @@ struct CanonicalTests {
             } else {
                 #expect(Bool(false), "Expected previous node data")
             }
-        } catch {
-            #expect(Bool(false), "Creating previous node block should not throw: \(error)")
         }
     }
     
     @Test("Block Validation")
     func testBlockValidation() {
         // Test valid payload block
+        // Create a payload block
+        let block = CanonicalBlock(
+            blockControlFlags: BlockControlFlags(),
+            payloadData: [1, 2, 3]
+        )
+        
         do {
-            // Create a payload block
-            let block = try CanonicalBlock(
-                blockControlFlags: BlockControlFlags(),
-                payloadData: [1, 2, 3]
-            )
-            
-            do {
-                try block.validate()
-            } catch {
-                #expect(Bool(false), "Valid block should not throw on validation: \(error)")
-            }
+            try block.validate()
         } catch {
-            #expect(Bool(false), "Creating block should not throw: \(error)")
+            #expect(Bool(false), "Valid block should not throw on validation: \(error)")
         }
         
         // Test invalid block type
+        var invalidBlock = CanonicalBlock(
+            blockControlFlags: BlockControlFlags(),
+            payloadData: [1, 2, 3]
+        )
+        // Change block type but keep payload data
+        invalidBlock = CanonicalBlock(
+            blockType: BlockType.hopCount.rawValue,
+            blockNumber: invalidBlock.blockNumber,
+            blockControlFlags: invalidBlock.blockControlFlags,
+            crc: invalidBlock.crc,
+            data: invalidBlock.getData()
+        )
+        
         do {
-            var block = try CanonicalBlock(
-                blockControlFlags: BlockControlFlags(),
-                payloadData: [1, 2, 3]
-            )
-            // Change block type but keep payload data
-            block = CanonicalBlock(
-                blockType: BlockType.hopCount.rawValue,
-                blockNumber: block.blockNumber,
-                blockControlFlags: block.blockControlFlags,
-                crc: block.crc,
-                data: block.getData()
-            )
-            
-            do {
-                try block.validate()
-                #expect(Bool(false), "Invalid block should throw on validation")
-            } catch {
-                // Expected to throw
-            }
+            try invalidBlock.validate()
+            #expect(Bool(false), "Invalid block should throw on validation")
         } catch {
-            #expect(Bool(false), "Creating block should not throw: \(error)")
+            // Expected to throw
         }
         
         // Test invalid data type
@@ -198,7 +182,7 @@ struct CanonicalTests {
             let payload: [UInt8] = [1, 2, 3, 4, 5]
             
             // Create a payload block
-            let block = try CanonicalBlock(
+            let block = CanonicalBlock(
                 blockControlFlags: BlockControlFlags(),
                 payloadData: payload
             )
@@ -229,7 +213,7 @@ struct CanonicalTests {
         do {
             // Create a block to serialize
             let payload: [UInt8] = [1, 2, 3, 4, 5]
-            let originalBlock = try CanonicalBlock(
+            let originalBlock = CanonicalBlock(
                 blockControlFlags: BlockControlFlags.blockReplicate,
                 payloadData: payload
             )
@@ -258,7 +242,7 @@ struct CanonicalTests {
         // Test hop count block deserialization
         do {
             // Create a hop count block
-            let originalBlock = try CanonicalBlock(
+            let originalBlock = CanonicalBlock(
                 blockNumber: 3,
                 blockControlFlags: BlockControlFlags.blockDeleteBundle,
                 hopLimit: 10
@@ -289,7 +273,7 @@ struct CanonicalTests {
         // Test bundle age block deserialization
         do {
             // Create a bundle age block
-            let originalBlock = try CanonicalBlock(
+            let originalBlock = CanonicalBlock(
                 blockNumber: 2,
                 blockControlFlags: BlockControlFlags.blockStatusReport,
                 bundleAge: 1000
@@ -320,7 +304,7 @@ struct CanonicalTests {
         do {
             // Create a previous node block
             let dtnNode = EndpointID.dtn(EndpointScheme.DTN, DTNAddress("//node1/"))
-            let originalBlock = try CanonicalBlock(
+            let originalBlock = CanonicalBlock(
                 blockNumber: 4,
                 blockControlFlags: BlockControlFlags.blockReplicate,
                 previousNode: dtnNode

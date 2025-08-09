@@ -122,7 +122,7 @@ struct EndpointIDTests {
         
         for endpoint in endpoints {
             // Encode to CBOR
-            let cbor = try endpoint.encode()
+            let cbor = endpoint.encode()
             
             // Decode from CBOR
             let decoded = try EndpointID(from: cbor)
