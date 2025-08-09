@@ -111,7 +111,7 @@ actor NIOConnection {
     
     /// Configure channel pipeline
     private func configureChannel(channel: Channel) -> EventLoopFuture<Void> {
-        var handlers: [ChannelHandler] = []
+        var handlers: [any ChannelHandler] = []
         
         // Add TLS if required
         if securityParameters.requiresEncryption {
@@ -127,12 +127,12 @@ actor NIOConnection {
         // Add the main connection handler
         handlers.append(ConnectionChannelHandler(connection: connection))
         
-        return channel.pipeline.addHandlers(handlers)
+        return channel.pipeline.addHandlers(handlers, position: .last)
     }
     
     /// Configure UDP channel pipeline
     private func configureUDPChannel(channel: Channel) -> EventLoopFuture<Void> {
-        var handlers: [ChannelHandler] = []
+        var handlers: [any ChannelHandler] = []
         
         // Add DTLS if required for UDP
         if securityParameters.requiresEncryption {
@@ -143,7 +143,7 @@ actor NIOConnection {
         // Add UDP-specific handlers
         handlers.append(UDPMessageHandler(connection: connection))
         
-        return channel.pipeline.addHandlers(handlers)
+        return channel.pipeline.addHandlers(handlers, position: .last)
     }
     
     /// Create TLS configuration from security parameters

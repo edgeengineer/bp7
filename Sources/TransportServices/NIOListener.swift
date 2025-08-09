@@ -93,7 +93,7 @@ actor NIOListener {
             await listener.connectionReceivedHandler?(connection)
             
             // Configure channel pipeline
-            var handlers: [ChannelHandler] = []
+            var handlers: [any ChannelHandler] = []
             
             // Add TLS if required
             if self.securityParameters.requiresEncryption {
@@ -107,7 +107,7 @@ actor NIOListener {
             handlers.append(ConnectionChannelHandler(connection: connection))
             
             do {
-                try await channel.pipeline.addHandlers(handlers).get()
+                try await channel.pipeline.addHandlers(handlers, position: .last).get()
                 await connection.triggerReady()
             } catch {
                 print("Failed to configure channel: \(error)")
@@ -129,7 +129,7 @@ actor NIOListener {
     nonisolated private func createTLSConfiguration() -> TLSConfiguration {
         var config = TLSConfiguration.makeServerConfiguration(
             certificateChain: [], // TODO: Add certificates
-            privateKey: .file("/dev/null") // TODO: Add private key
+            privateKey: .privateKey(try! NIOSSLPrivateKey(bytes: [], format: .pem)) // TODO: Add private key
         )
         
         // Configure minimum TLS version

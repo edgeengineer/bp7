@@ -1,5 +1,5 @@
 {
-  "originHash" : "9f2790d394288a30e4b91b0344cba6911661c55201dc6cb6cd2c96f1004e6930",
+  "originHash" : "3bf14ce2dbd6b1b6289eb63ac70461cb97213e8fcfa005c96b48e6b745391ab4",
   "pins" : [
     {
       "identity" : "cbor",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/edgeengineer/cyclic-redundancy-check.git",
       "state" : {
-        "revision" : "a66cb68c1d2fd7fce9279f0d37771363b0a06c8e",
-        "version" : "0.0.4"
+        "revision" : "2104bfa045460bfcfd1a3a8b8b4f117ce1f69013",
+        "version" : "0.0.5"
       }
     },
     {

@@ -48,14 +48,14 @@ struct CyclicRedundancyCheckTests {
         // Test with simple data
         let simpleData: [UInt8] = [0x01, 0x02, 0x03, 0x04]
         let simpleCrc32 = CyclicRedundancyCheck.crc32(bytes: simpleData)
-        // Use the actual value returned by the external package
-        #expect(simpleCrc32 == 0xFA7D24AB)
+        // Use the actual value returned by the external package (after CRC library fix)
+        #expect(simpleCrc32 == 3057449933) // 0xB63CFBCD
         
         // Test with longer data
         let longerData: [UInt8] = Array("Hello, world!".utf8)
         let longerCrc32 = CyclicRedundancyCheck.crc32(bytes: longerData)
-        // Use the actual value returned by the external package
-        #expect(longerCrc32 == 0xFDA5D6CF)
+        // Use the actual value returned by the external package (after CRC library fix)
+        #expect(longerCrc32 == 3957769958) // 0xEBE6C6E6
     }
     
     @Test("CRC Verification")
